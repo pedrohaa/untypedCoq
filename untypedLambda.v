@@ -108,7 +108,7 @@ Fixpoint multiple_substitution (t: term) (lt: list term) (i: nat) (length: nat):
     | Lambda t1 => Lambda (multiple_substitution t1 lt (i+1) length)
   end.
 
-Lemma id_substitution: forall t: term, forall i: nat, multiple_substitution t nil i 0 = t.
+Theorem id_substitution: forall t: term, forall i: nat, multiple_substitution t nil i 0 = t.
 Proof.
   move => t.
   induction t.
@@ -143,6 +143,38 @@ Proof.
   done.
 Qed.
 
-Lemma no_index_sub: forall t u: term, forall i: nat, C i t -> substitution i t u = t.
+
+(*Is it true?*)
+Lemma lambda_equivalence: forall t u: term, t = u <-> (Lambda t = Lambda u).
+Proof.
+  move => t u.
+  split.
+  move => h0.
+  rewrite h0.
+  done.
+  move => h0.
+  admit.
+Qed.
+
+Theorem no_index_sub: forall t u: term, forall i: nat, C i t -> substitution i t u = t.
   Proof.
     move => t u.
+    induction i.
+    induction t.
+    rewrite/C.
+    rewrite/C_aux.
+    move => h0.
+    case h0.
+    Search "0".
+    apply Lt.lt_n_0 in h0.
+    done.
+    apply Lt.lt_n_0 in h0.
+    done.
+    simpl.
+    move:IHt.
+    rewrite/C.
+    simpl.
+    move => IHt.
+    move => h0.
+    rewrite -lambda_equivalence.
+    rewrite/substitution.
