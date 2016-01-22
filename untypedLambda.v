@@ -12,7 +12,6 @@ Inductive term :=
 
 Check Lambda ( Lambda (Var 1)).
 
-(*Is it true?*)
 Lemma lambda_equivalence: forall t u: term, t = u <-> (Lambda t = Lambda u).
 Proof.
   move => t u.
@@ -204,7 +203,10 @@ Proof.
   apply beq_nat_false_iff.
   Search _ (_<>_).
   Search _ (_ < _).
-  admit.
+  intro.
+  rewrite H in h0.
+  apply Lt.lt_irrefl in h0.
+  done.
   move => h.
   rewrite h.
   done.
@@ -237,14 +239,31 @@ Inductive reducesInOneTo: term -> term -> Prop :=
 
 Inductive reduces: term -> term -> Prop :=
   | sym: forall (t: term), reduces t t
-  | ind: forall (t u v: term), (reducesInOneTo t u /\ reduces u v) -> reduces t v.
+  | ind: forall (t u v: term), reducesInOneTo t u -> reduces u v -> reduces t v.
+
+
+Inductive reducesN: nat -> term -> term -> Prop :=
+  | symN: forall (t: term), reducesN 0 t t
+  | indN: forall n: nat, forall (t u v: term), reducesInOneTo t u -> reducesN n u v -> reducesN (S n) t v.
 
 Fixpoint reducesInN (t: term) (u: term) (n: nat): Prop :=
   match n with
     | 0 => t = u
-    | 1 => reducesInOneTo t u
+    (*| 1 => reducesInOneTo t u*)
     | S m => exists v: term, (reducesInOneTo t v /\ reducesInN v u m)
   end.
+
+
+Lemma r_equivalence: forall (t u: term), reduces t u -> (exists (n: nat), reducesInN t u n).
+  Check (reduces_ind).
+  apply (reduces_ind (fun u v: term => exists n: nat, reducesInN u v n)); intros.
+  exists 0.
+  simpl. trivial.
+  elim H1.
+  intros.
+  exists (S x).
+  unfold reducesInN. exists u. split. trivial. trivial.
+Save.  
 
 (*Context closure*)
 
@@ -259,21 +278,16 @@ Proof.
   done.
   move => t u v.
   move:IHn.
-  case n.
-  move => IHn.
   simpl.
-  move => h0.
-  apply (appLeft t u v) in h0.
-  done.
-  move => n0 IHn0.
+  move => IHn.
   move => h0.
   case h0.
-  move => x [h1 h2].
-  exists (App x v).
+  move => v0 [h1 h2].  
+  apply (appLeft t v0 v) in h1.
+  exists (App v0 v).
   split.
-  apply (appLeft t x v).
   done.
-  apply IHn0.
+  apply IHn.
   done.
 Qed.
 
@@ -288,21 +302,16 @@ Proof.
   done.
   move => t u v.
   move:IHn.
-  case n.
-  move => IHn.
   simpl.
-  move => h0.
-  apply (appRight t u v) in h0.
-  done.
-  move => n0 IHn0.
+  move => IHn.
   move => h0.
   case h0.
-  move => x [h1 h2].
-  exists (App v x).
+  move => v0 [h1 h2].  
+  apply (appRight t v0 v) in h1.
+  exists (App v v0).
   split.
-  apply (appRight t x v).
   done.
-  apply IHn0.
+  apply IHn.
   done.
 Qed.
 
@@ -312,32 +321,81 @@ Proof.
   move: t u.
   induction n.
   simpl.
-  intros.
-  rewrite H.
+  move => t u h0.
+  rewrite h0.
   done.
-  move: IHn.
-  case n.
-  move => h0 t u.
+  move => t u.
+  move:IHn.
   simpl.
-  apply addLamb.
-  move => n0 IHn0 t u h0.
+  move => IHn.
+  move => h0.
   case h0.
-  move => x [h1 h2].
-  exists (Lambda x).
+  move => v0 [h1 h2].  
+  apply (addLamb t v0) in h1.
+  exists (Lambda v0).
   split.
-  apply addLamb in h1.
   done.
-  apply IHn0.
+  apply IHn.
   done.
 Qed.
 
-Lemma red_equivalence: forall (t u: term), reduces t u <-> (exists (n: nat), reducesInN t u n).
+Lemma test: forall t: term, reduces t t /\ exists n : nat, reducesInN t t n.
 Proof.
-  move => t u.
+  intros.
   split.
-  move => h0.
-  case h0.  
-  move => t0.
+  apply sym.
   exists 0.
   done.
-  move => t0 v0 v [h1 h2].
+Qed.
+  
+Lemma red_equivalence: forall (t u: term), reduces t u <-> (exists (n: nat), reducesInN t u n).
+Proof.
+  intros.
+  split.
+  Check (reduces_ind).
+  move => h0.
+  
+  apply (reduces_ind ( fun t u => exists n : nat, reducesInN t u n)).
+  intros.
+  exists 0.
+  simpl.
+  done.
+  intros.
+  case H1. intros.
+  exists (S x).
+  simpl.
+  exists u0.
+  split. trivial.trivial.
+  done.
+  move => h0.
+  case:h0.  
+  move => n.
+  move: t u.
+  induction n.
+  simpl.
+  move => t u h1.
+  rewrite h1.
+  apply sym.
+  move => t u.
+  induction n.
+  simpl.
+  move => h0.
+  apply (ind t u).
+  case h0.
+  move => x [h1 h2].
+  rewrite -h2.
+  done.
+  apply sym.
+  move => h0.
+  case h0.
+  move => w [h1 h2].
+  apply (ind t w).
+  done.
+  apply (IHn w u).
+  done.
+Qed.
+
+(*Krivine Abstract Machine*)
+
+Definition instructions :=
+|
