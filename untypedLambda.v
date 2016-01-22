@@ -88,21 +88,6 @@ Fixpoint increase_k_fv (k: nat) (n:nat) (t:term): term :=
     | Lambda t1 => Lambda (increase_k_fv k (n+1) t1)
   end.
 
-Fixpoint beta_eq_aux (k: nat) (n: nat) (t1: term) (t2: term): term :=
-  match t1 with
-    | Var v1 => if beq_nat v1 (n-1) then (increase_k_fv k 0 t2) else Var v1
-    | App t3 t4 => App (beta_eq_aux k n t3 t2) (beta_eq_aux k n t4 t2)
-    | Lambda t3 => if beq_nat 0 n then beta_eq_aux k (n+1) t3 t2 else Lambda (beta_eq_aux (k+1) (n+1) t3 (t2))
-  end.
-
-Definition beta_eq (t1: term) (t2: term): term := beta_eq_aux 0 0 t1 t2.
-
-Compute (term_clos (App (Lambda (Lambda (Var 2))) (Lambda ( Lambda (Var 0))))).
-
-Compute (increase_k_fv 0 0 (Lambda ( Lambda (Var 0)))).
-
-Compute (beta_eq (Lambda (Lambda (App (Var 1) (Lambda (App (Var 0) (Var 2)))))) (Lambda (App (Var 5) (Var 0)))).
-
 (*
  ^ k
  |
@@ -242,4 +227,117 @@ Qed.
 
 (*last theorem... i'll do it later*)
 
+(*new part*)
 
+Inductive reducesInOneTo: term -> term -> Prop :=
+  | appLeft: forall (t u v: term), reducesInOneTo t u -> reducesInOneTo (App t v) (App u v)  
+  | appRight: forall (t u v: term), reducesInOneTo t u -> reducesInOneTo (App v t) (App v u)  
+  | addLamb: forall (t u:term), reducesInOneTo t u -> reducesInOneTo (Lambda t) (Lambda u)
+  | removeLamb: forall (t u: term), reducesInOneTo (App (Lambda t) u) (substitution 0 t u).
+
+Inductive reduces: term -> term -> Prop :=
+  | sym: forall (t: term), reduces t t
+  | ind: forall (t u v: term), (reducesInOneTo t u /\ reduces u v) -> reduces t v.
+
+Fixpoint reducesInN (t: term) (u: term) (n: nat): Prop :=
+  match n with
+    | 0 => t = u
+    | 1 => reducesInOneTo t u
+    | S m => exists v: term, (reducesInOneTo t v /\ reducesInN v u m)
+  end.
+
+(*Context closure*)
+
+Lemma app_left: forall (t u v: term) (n: nat), (reducesInN t u n) -> reducesInN (App t v) (App u v) n.
+Proof.
+  move => t u v n.
+  move: t u v.
+  induction n.
+  simpl.
+  move => t u v h0.
+  rewrite h0.
+  done.
+  move => t u v.
+  move:IHn.
+  case n.
+  move => IHn.
+  simpl.
+  move => h0.
+  apply (appLeft t u v) in h0.
+  done.
+  move => n0 IHn0.
+  move => h0.
+  case h0.
+  move => x [h1 h2].
+  exists (App x v).
+  split.
+  apply (appLeft t x v).
+  done.
+  apply IHn0.
+  done.
+Qed.
+
+Lemma app_right: forall (t u v: term) (n: nat), (reducesInN t u n) -> reducesInN (App v t) (App v u) n.
+Proof.
+  move => t u v n.
+  move: t u v.
+  induction n.
+  simpl.
+  move => t u v h0.
+  rewrite h0.
+  done.
+  move => t u v.
+  move:IHn.
+  case n.
+  move => IHn.
+  simpl.
+  move => h0.
+  apply (appRight t u v) in h0.
+  done.
+  move => n0 IHn0.
+  move => h0.
+  case h0.
+  move => x [h1 h2].
+  exists (App v x).
+  split.
+  apply (appRight t x v).
+  done.
+  apply IHn0.
+  done.
+Qed.
+
+Lemma add_Lamb: forall (t u:term) (n: nat), reducesInN t u n -> reducesInN (Lambda t) (Lambda u) n.
+Proof.
+  move => t u n.
+  move: t u.
+  induction n.
+  simpl.
+  intros.
+  rewrite H.
+  done.
+  move: IHn.
+  case n.
+  move => h0 t u.
+  simpl.
+  apply addLamb.
+  move => n0 IHn0 t u h0.
+  case h0.
+  move => x [h1 h2].
+  exists (Lambda x).
+  split.
+  apply addLamb in h1.
+  done.
+  apply IHn0.
+  done.
+Qed.
+
+Lemma red_equivalence: forall (t u: term), reduces t u <-> (exists (n: nat), reducesInN t u n).
+Proof.
+  move => t u.
+  split.
+  move => h0.
+  case h0.  
+  move => t0.
+  exists 0.
+  done.
+  move => t0 v0 v [h1 h2].
