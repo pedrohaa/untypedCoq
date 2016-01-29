@@ -176,13 +176,23 @@ Proof.
   done.
 Qed.
   
+Check nth.
+Check lt.
 
-Fixpoint multiple_substitution (t: term) (lt: list term) (i: nat) (length: nat): term :=
+Fixpoint lifting_list (n:nat) (k:nat) (lst:list term) : list term :=
+  match lst with
+    |nil => nil
+    |h::t => (lifting n k h) :: (lifting_list n k t)
+end.
+
+Fixpoint multiple_substitution (t: term) (lst: list term) (i: nat) (length: nat): term :=
   match t with
-    | Var v => if (leb i v) && (leb v (i+length-1)) then substitution v (Var v) (nth (v - i) lt (Var v))  else Var v
-    | App t1 t2 => App (multiple_substitution t1 lt i length) (multiple_substitution t2 lt i length)
-    | Lambda t1 => Lambda (multiple_substitution t1 lt (i+1) length)
+    | Var v => if (leb i v) && (leb v (i+length-1)) then substitution v (Var v) (nth (v - i) lst (Var v)) else Var v
+    | App t1 t2 => App (multiple_substitution t1 lst i length) (multiple_substitution t2 lst i length)
+    | Lambda t1 => Lambda (multiple_substitution t1 (lifting_list 1 0 lst) (i+1) length)
   end.
+
+
 
 Lemma dic: forall b : bool, (b = false) \/ (b = true).
 Proof.
@@ -270,7 +280,14 @@ Fixpoint all_less_i (i: nat) (lu: list term): Prop :=
     | x :: xs => (C i x) -> (all_less_i i xs)
   end.
 
-Lemma mult_sub_inv: forall (t: term) (k i: nat) (lu: list term), k > 1 -> (k < length lu) -> all_less_i i lu -> multiple_substitution t lu i (length lu) = substitution i (multiple_substitution t (tl lu) (i-1) (length lu - 1)) (hd (Var 0) lu) .
+Check length.
+Check nth.
+Lemma mult_sub_inv_bis: forall (t:term) (lu:list term) (i k:nat),
+  (k >= 1) -> C i (nth k lu (Var 0)) -> multiple_substitution t lu i (length lu) = substitution i (multiple_substitution t (tl lu) (i+1) (length lu - 1)) (hd (Var 0) lu). 
+Proof.
+  
+
+Lemma mult_sub_inv: forall (t: term) (k i: nat) (lu: list term), k >= 1 -> (k < length lu) -> all_less_i i lu -> multiple_substitution t lu i (length lu) = substitution i (multiple_substitution t (tl lu) (i-1) (length lu - 1)) (hd (Var 0) lu) .
 Proof.
 
 Qed.
