@@ -114,6 +114,29 @@ Fixpoint substitution (i: nat) (t1: term) (t2: term): term :=
     | Lambda t3 => Lambda (substitution (i+1) t3 (lifting 1 0 t2))
   end.
 
+Lemma subs_inv: forall (t u: term) (i: nat), (C i t) -> substitution i t u = t.
+Proof.
+  induction t.
+  simpl.
+  intros.
+  Search _ (_ < _).
+  have:(beq_nat i v = false).
+  apply beq_nat_false_iff.
+  intro.
+  rewrite H0 in H.
+  apply Lt.lt_irrefl in H.
+  done.
+  move => h0.
+  rewrite h0.
+  done.
+  simpl.
+  intros.
+  rewrite -lambda_equivalence.
+  apply IHt.
+  done.
+  
+Qed.
+
 Lemma substitution_invariance: forall (t u: term) (i: nat), (C 0 t) -> substitution i t u = t.
 Proof.
   induction t.
@@ -229,6 +252,20 @@ Qed.
 
 (*last theorem... i'll do it later*)
 
+Fixpoint all_less_i (i: nat) (lu: list term): Prop := 
+  match lu with
+    | nil => True
+    | x :: xs => (C i x) -> (all_less_i i xs)
+  end.
+
+Lemma mult_sub_inv: forall (t: term) (k i: nat) (lu: list term), k > 1 -> (k < length lu) -> all_less_i i lu -> multiple_substitution t lu i (length lu) = substitution i (multiple_substitution t (tl lu) (i-1) (length lu - 1)) (hd (Var 0) lu) .
+Proof.
+
+Qed.
+
+
+Fixpoint multiple_substitution (t: term) (lt: list term) (i: nat) (length: nat): term :=
+                                                                                                        
 (*new part*)
 
 Inductive reducesInOneTo: term -> term -> Prop :=
@@ -365,7 +402,7 @@ Proof.
   exists (S x).
   simpl.
   exists u0.
-  split. trivial.trivial.
+  split. trivial. trivial.
   done.
   move => h0.
   case:h0.  
@@ -397,5 +434,49 @@ Qed.
 
 (*Krivine Abstract Machine*)
 
-Definition instructions :=
-|
+(*Syntax*)
+
+Inductive inst :=
+| Access: nat -> inst
+| Grab: inst
+| Push: list inst -> inst.
+
+Definition code := list inst.
+
+Inductive environment : Type := 
+| nul: environment
+| cons: (prod code environment) -> environment -> environment.
+
+Definition state := prod (prod code environment) environment.
+
+Check environment_ind.
+
+(*Semantics*)
+
+Fixpoint exec_inst (s: state): option state:=
+  match s with
+    | ((Access 0)::c, cons (c0,e0) e, stack) => Some (c0, e0, stack)
+    | ((Access n)::c, cons (c0,e0) e, stack) => Some ((Access (n-1)) :: c, e, stack)
+    | ((Push c)::c0, e, stack) => Some (c0, e, cons (c,e) stack)
+    | (Grab::c, e, cons (c0,e0) stack) => Some (c, cons (c0,e0) e, stack)
+    | _ => None
+  end.
+
+(*Compiling*)
+
+Fixpoint compile (t: term): code :=
+  match t with
+      | Var n => (Access n) :: nil
+      | Lambda t1 => Grab :: (compile t1)
+      | App t1 t2 => (Push (compile t1)) :: (compile t2) 
+  end.
+
+
+Fixpoint tau (c: code) {struct c}: term :=
+  match c with
+    | nil => Var 0
+    | ((Push c1) :: c0) => App (tau c0) (tau c1)
+    | _ => Var 0
+(*    | (Grab :: c0) => Lambda (tau c0)
+    | (Access n :: _) => Var n*)
+  end.
