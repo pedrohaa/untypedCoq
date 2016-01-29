@@ -176,23 +176,13 @@ Proof.
   done.
 Qed.
   
-Check nth.
-Check lt.
 
-Fixpoint lifting_list (n:nat) (k:nat) (lst:list term) : list term :=
-  match lst with
-    |nil => nil
-    |h::t => (lifting n k h) :: (lifting_list n k t)
-end.
-
-Fixpoint multiple_substitution (t: term) (lst: list term) (i: nat) (length: nat): term :=
+Fixpoint multiple_substitution (t: term) (lt: list term) (i: nat) (length: nat): term :=
   match t with
-    | Var v => if (leb i v) && (leb v (i+length-1)) then substitution v (Var v) (nth (v - i) lst (Var v)) else Var v
-    | App t1 t2 => App (multiple_substitution t1 lst i length) (multiple_substitution t2 lst i length)
-    | Lambda t1 => Lambda (multiple_substitution t1 (lifting_list 1 0 lst) (i+1) length)
+    | Var v => if (leb i v) && (leb v (i+length-1)) then substitution v (Var v) (nth (v - i) lt (Var v))  else Var v
+    | App t1 t2 => App (multiple_substitution t1 lt i length) (multiple_substitution t2 lt i length)
+    | Lambda t1 => Lambda (multiple_substitution t1 lt (i+1) length)
   end.
-
-
 
 Lemma dic: forall b : bool, (b = false) \/ (b = true).
 Proof.
@@ -291,9 +281,6 @@ Lemma mult_sub_inv: forall (t: term) (k i: nat) (lu: list term), k >= 1 -> (k < 
 Proof.
 
 Qed.
-
-
-Fixpoint multiple_substitution (t: term) (lt: list term) (i: nat) (length: nat): term :=
                                                                                                         
 (*new part*)
 
@@ -476,10 +463,10 @@ Definition code := list inst.*)
 Inductive inst :=
 | Access: nat -> inst
 | Grab: inst
-| Push: code -> inst.
+| Push: code -> inst
 with code: Type :=
 | cnil:   code
-| cCons:  instruction -> code -> code.
+| cCons:  inst -> code -> code.
 
 Inductive environment : Type := 
 | nul: environment
@@ -493,10 +480,10 @@ Check environment_ind.
 
 Fixpoint exec_inst (s: state): option state:=
   match s with
-    | ((Access 0)::c, cons (c0,e0) e, stack) => Some (c0, e0, stack)
-    | ((Access n)::c, cons (c0,e0) e, stack) => Some ((Access (n-1)) :: c, e, stack)
-    | ((Push c)::c0, e, stack) => Some (c0, e, cons (c,e) stack)
-    | (Grab::c, e, cons (c0,e0) stack) => Some (c, cons (c0,e0) e, stack)
+    | (cCons (Access 0) c, cons (c0,e0) e, stack) => Some (c0, e0, stack)
+    | (cCons (Access n) c, cons (c0,e0) e, stack) => Some (cCons (Access (n-1)) c, e, stack)
+    | (cCons (Push c) c0, e, stack) => Some (c0, e, cons (c,e) stack)
+    | (cCons Grab c, e, cons (c0,e0) stack) => Some (c, cons (c0,e0) e, stack)
     | _ => None
   end.
 
@@ -504,17 +491,24 @@ Fixpoint exec_inst (s: state): option state:=
 
 Fixpoint compile (t: term): code :=
   match t with
-      | Var n => (Access n) :: nil
-      | Lambda t1 => Grab :: (compile t1)
-      | App t1 t2 => (Push (compile t1)) :: (compile t2) 
+      | Var n => cCons (Access n) cnil
+      | Lambda t1 => cCons Grab (compile t1)
+      | App t1 t2 => cCons (Push (compile t1)) (compile t2) 
   end.
 
 
-Fixpoint tau (c: code) {struct c}: term :=
+Fixpoint tau_code (c: code): term :=
   match c with
-    | nil => Var 0
-    | ((Push c1) :: c0) => App (tau c0) (tau c1)
-    | _ => Var 0
-(*    | (Grab :: c0) => Lambda (tau c0)
-    | (Access n :: _) => Var n*)
+    | cnil => Var 0
+    | (cCons (Access n) _ ) => Var n                
+    | (cCons (Push c1) c0) => App (tau_code c0) (tau_code c1)
+    | (cCons Grab c0) => Lambda (tau_code c0)
   end.
+
+Fixpoint tau_env (e: env): 
+
+
+
+
+
+
