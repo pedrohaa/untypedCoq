@@ -134,7 +134,14 @@ Proof.
   rewrite -lambda_equivalence.
   apply IHt.
   done.
-  
+  simpl.
+  intros.
+  rewrite app_equivalence.
+  split.
+  apply IHt1.
+  apply H.
+  apply IHt2.
+  apply H.
 Qed.
 
 Lemma substitution_invariance: forall (t u: term) (i: nat), (C 0 t) -> substitution i t u = t.
@@ -149,8 +156,13 @@ Proof.
   simpl.
   move => u i h0.  
   rewrite -lambda_equivalence.
-  apply IHt.
-  admit.
+  apply subs_inv.
+  induction i.
+  simpl.
+  done.
+  apply ind_C_pred.
+  rewrite Plus.plus_comm in IHi.
+  done.
   intros.
   simpl.
   rewrite app_equivalence.
@@ -436,12 +448,21 @@ Qed.
 
 (*Syntax*)
 
-Inductive inst :=
+(*Inductive inst :=
 | Access: nat -> inst
 | Grab: inst
 | Push: list inst -> inst.
 
-Definition code := list inst.
+Definition code := list inst.*)
+
+
+Inductive inst :=
+| Access: nat -> inst
+| Grab: inst
+| Push: code -> inst.
+with code: Type :=
+| cnil:   code
+| cCons:  instruction -> code -> code.
 
 Inductive environment : Type := 
 | nul: environment
