@@ -176,12 +176,17 @@ Proof.
   done.
 Qed.
   
+Fixpoint lift_all (n: nat) (k: nat) (l: list term): list term :=
+  match l with
+    | nil => nil
+    | x :: xs => (lifting n k x) :: (lift_all n k xs)
+  end.
 
 Fixpoint multiple_substitution (t: term) (lt: list term) (i: nat) (length: nat): term :=
   match t with
     | Var v => if (leb i v) && (leb v (i+length-1)) then substitution v (Var v) (nth (v - i) lt (Var v))  else Var v
     | App t1 t2 => App (multiple_substitution t1 lt i length) (multiple_substitution t2 lt i length)
-    | Lambda t1 => Lambda (multiple_substitution t1 lt (i+1) length)
+    | Lambda t1 => Lambda (multiple_substitution t1 (lift_all 1 0 lt) (i+1) length)
   end.
 
 Lemma dic: forall b : bool, (b = false) \/ (b = true).
@@ -272,11 +277,215 @@ Fixpoint all_less_i (i: nat) (lu: list term): Prop :=
 
 Check length.
 Check nth.
-Lemma mult_sub_inv_bis: forall (t:term) (lu:list term) (i k:nat),
-  (k >= 1) -> C i (nth k lu (Var 0)) -> multiple_substitution t lu i (length lu) = substitution i (multiple_substitution t (tl lu) (i+1) (length lu - 1)) (hd (Var 0) lu). 
-Proof.
-  
 
+Lemma lift_free: forall (t: term) (i k: nat), C i t -> C (i+1) (lifting 1 k t).
+Proof.
+  induction t.
+  simpl.
+  intros.
+  case (leb k v).
+  simpl.
+  Search "plus".
+  apply Plus.plus_lt_compat_r.
+  done.
+  simpl.
+  Search "plus".
+  apply Plus.lt_plus_trans.
+  done.
+  simpl.
+  intros.
+  apply IHt.
+  done.
+  simpl.
+  intros.
+  split.
+  apply IHt1.
+  apply H.
+  apply IHt2.
+  apply H.
+Qed.
+
+Lemma extract_lifting: forall (lu: list term) (j: nat) (u: term), (j < length lu) -> (nth j (lift_all 1 0 lu) u) = lifting 1 0 (nth j lu u).
+Proof.
+  induction lu.
+  simpl.
+  intros.
+  Search _ (_<_).
+  apply Lt.lt_n_0 in H.
+  done.
+  simpl.
+  intros.
+  induction j.
+  done.
+  apply IHlu.
+  Search _ (_<_).
+  apply (Plus.plus_lt_reg_l j (length lu) 1).
+  apply H.
+Qed.
+
+Lemma mult_sub_inv_bis: forall (t u:term) (lu:list term) (i k: nat),
+  (k < length lu) -> (length lu >= 1)-> (forall (j:nat) (u:term), (j < length lu) -> C i (nth j lu u)) -> multiple_substitution t (u :: lu) i (length lu) = substitution i (multiple_substitution t (lu) (i+1) (length lu - 1)) (u). 
+Proof.
+  induction t.
+  intros.
+  simpl.
+  have:(true = beq_nat v v).
+  Search "beq".
+  apply ( beq_nat_refl v).
+  intro.
+  rewrite -x.
+  have:((leb i v = false) \/ (leb i v = true)).
+  apply (dic (leb i v)).
+  intro.
+  case:x0.
+  move => h0.
+  rewrite h0.
+  simpl.
+  have:(leb (i + 1) v = false).
+  Search "ltb".
+  apply leb_correct_conv.
+  apply (leb_iff_conv v i) in h0.
+  Search _ (_<_).
+  apply (Plus.lt_plus_trans).
+  done.
+  move => h1.
+  rewrite h1.  
+  simpl.
+  Search "beq".
+  have:(beq_nat i v = false).
+  apply beq_nat_false_iff.
+  intro.
+  rewrite H2 in h0.
+  apply leb_iff_conv in h0.
+  apply Lt.lt_irrefl in h0.
+  done.
+  intro.
+  rewrite x0.
+  done.
+  move => h0.
+  rewrite h0.
+  simpl.
+  have:(leb v (i + length lu - 1) = false \/ leb v (i + length lu - 1) = true).
+  apply dic.
+  intros.
+  case:x0.
+  intro.
+  rewrite a.
+  have:(leb v (i + 1 + (length lu - 1) - 1) = false).
+  (*I have to simplify the expression*)
+  admit.
+  intro.
+  have:((leb (i + 1) v && leb v (i + 1 + (length lu - 1) - 1))%bool = false).
+  apply Bool.andb_false_intro2.
+  done.
+  intro.
+  rewrite x1.
+  simpl.
+  (*We have i < i + length lu - 1 < v => i < v => beq_nat i v = false*)
+  have:(beq_nat i v = false).
+  admit.
+  intro.
+  rewrite x2.
+  done.
+  intro.
+  have:(i <= v).
+  Search "leb".
+  apply leb_iff.
+  done.
+  move => h1.
+  apply Lt.le_lt_or_eq_iff in h1.
+  apply or_comm in h1.
+  case h1.
+  intro.
+  have:(i - i = 0).
+  Search _ (_-_).
+  apply Minus.minus_diag.
+  intro.
+  rewrite -H2.
+  rewrite x0.
+  have:(leb (i+1) i = false).
+  Search "leb".
+  apply leb_iff_conv.
+  Search _ (_<_).
+  rewrite Plus.plus_comm.
+  apply Lt.lt_n_Sn.
+  intro.
+  rewrite x1.
+  simpl.
+  rewrite -beq_nat_refl.
+  have:(leb i (i + length lu - 1) = true).
+  apply leb_iff.
+  (*Since length lu - 1 > 0, we have the inequality*)
+  admit.
+  intro.
+  rewrite x2.
+  done.
+  intros.
+  (*since m >= i, S m - i will be a natural number*)
+  have:(v - i > 0).
+  Search _ (_>_).
+  admit.
+  intro.
+  rewrite b.
+  have:(exists m, v - i = 1+m).
+  admit.
+  intro.
+  case x1.
+  intros.
+  rewrite H3.
+  simpl.
+  have:((leb (i + 1) v && leb v (i + 1 + (length lu - 1) - 1))%bool = true).
+  admit.
+  intro.
+  rewrite x3.
+  have:(substitution i (nth (v - (i + 1)) lu (Var v)) u = (nth (v - (i + 1)) lu (Var v))).
+  apply no_index_sub.
+  apply H1.
+  (*trivial*)
+  admit.
+  intros.
+  rewrite x4.
+  have:(v - (i + 1) = x2).
+  admit.
+  intro.
+  rewrite x5.
+  done.
+  intros.
+  simpl.
+  rewrite -lambda_equivalence.
+  (*Find a way to deal with the lifting operation*)
+  have:(length lu = length (lift_all 1 0 lu)).
+  admit.
+  move => h0.
+  rewrite h0.
+  apply (IHt (lifting 1 0 u) (lift_all 1 0 lu) (i+1) k).
+  rewrite -h0.
+  done.
+  rewrite -h0.
+  done.
+  intros.
+  rewrite (extract_lifting).
+  apply lift_free.
+  apply H1.
+  rewrite h0.
+  done.
+  rewrite h0.
+  done.
+  intros.
+  simpl.
+  rewrite app_equivalence.
+  split.
+  apply (IHt1 u lu i k).
+  done.
+  done.
+  done.
+  apply (IHt2 u lu i k).
+  done.
+  done.  
+  done.
+Qed.
+
+  
 Lemma mult_sub_inv: forall (t: term) (k i: nat) (lu: list term), k >= 1 -> (k < length lu) -> all_less_i i lu -> multiple_substitution t lu i (length lu) = substitution i (multiple_substitution t (tl lu) (i-1) (length lu - 1)) (hd (Var 0) lu) .
 Proof.
 
