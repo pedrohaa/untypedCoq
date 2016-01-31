@@ -323,8 +323,8 @@ Proof.
   apply H.
 Qed.
 
-Lemma mult_sub_inv_bis: forall (t u:term) (lu:list term) (i k: nat),
-  (k < length lu) -> (length lu >= 1)-> (forall (j:nat) (u:term), (j < length lu) -> C i (nth j lu u)) -> multiple_substitution t (u :: lu) i (length lu) = substitution i (multiple_substitution t (lu) (i+1) (length lu - 1)) (u). 
+Lemma mult_sub_inv_bis: forall (t u:term) (lu:list term) (i: nat),
+ (forall (j:nat) (u:term), (j < length lu) -> C i (nth j lu u)) -> multiple_substitution t (u :: lu) i (length lu) = substitution i (multiple_substitution t (lu) (i+1) (length lu - 1)) (u).
 Proof.
   induction t.
   intros.
@@ -355,7 +355,7 @@ Proof.
   have:(beq_nat i v = false).
   apply beq_nat_false_iff.
   intro.
-  rewrite H2 in h0.
+  rewrite H0 in h0.
   apply leb_iff_conv in h0.
   apply Lt.lt_irrefl in h0.
   done.
@@ -401,7 +401,7 @@ Proof.
   Search _ (_-_).
   apply Minus.minus_diag.
   intro.
-  rewrite -H2.
+  rewrite -H0.
   rewrite x0.
   have:(leb (i+1) i = false).
   Search "leb".
@@ -432,7 +432,7 @@ Proof.
   intro.
   case x1.
   intros.
-  rewrite H3.
+  rewrite H1.
   simpl.
   have:((leb (i + 1) v && leb v (i + 1 + (length lu - 1) - 1))%bool = true).
   admit.
@@ -440,7 +440,7 @@ Proof.
   rewrite x3.
   have:(substitution i (nth (v - (i + 1)) lu (Var v)) u = (nth (v - (i + 1)) lu (Var v))).
   apply no_index_sub.
-  apply H1.
+  apply H.
   (*trivial*)
   admit.
   intros.
@@ -458,37 +458,22 @@ Proof.
   admit.
   move => h0.
   rewrite h0.
-  apply (IHt (lifting 1 0 u) (lift_all 1 0 lu) (i+1) k).
+  apply (IHt (lifting 1 0 u) (lift_all 1 0 lu) (i+1)).
   rewrite -h0.
-  done.
-  rewrite -h0.
-  done.
   intros.
   rewrite (extract_lifting).
   apply lift_free.
-  apply H1.
-  rewrite h0.
+  apply H.
   done.
-  rewrite h0.
   done.
   intros.
   simpl.
   rewrite app_equivalence.
   split.
-  apply (IHt1 u lu i k).
+  apply (IHt1 u lu i).
   done.
+  apply (IHt2 u lu i).
   done.
-  done.
-  apply (IHt2 u lu i k).
-  done.
-  done.  
-  done.
-Qed.
-
-  
-Lemma mult_sub_inv: forall (t: term) (k i: nat) (lu: list term), k >= 1 -> (k < length lu) -> all_less_i i lu -> multiple_substitution t lu i (length lu) = substitution i (multiple_substitution t (tl lu) (i-1) (length lu - 1)) (hd (Var 0) lu) .
-Proof.
-
 Qed.
                                                                                                         
 (*new part*)
