@@ -488,20 +488,55 @@ Proof.
   case:x0.
   intro.
   rewrite a.
-  have:(leb v (i + 1 + (length lu - 1) - 1) = false).
+  have:(leb (i+1) v && leb v (i + 1 + (length lu - 1) - 1))%bool = false.
+  
   (*I have to simplify the expression*)
-  admit.
+  induction lu.
+  simpl.
+  rewrite -plus_n_O.
+  case (dic (leb (i+1) v)).
   intro.
-  have:((leb (i + 1) v && leb v (i + 1 + (length lu - 1) - 1))%bool = false).
-  apply Bool.andb_false_intro2.
+  rewrite H0.
   done.
   intro.
-  rewrite x1.
+  have: leb v (i+1-1) = false.
+  rewrite -NPeano.Nat.add_sub_assoc.
+  simpl.
+  rewrite -plus_n_O.
+  rewrite leb_iff_conv.
+  apply leb_iff in H0.
+  rewrite plus_comm in H0.
+  Search "lt" "S".
+  apply le_lt_n_Sm in H0.
+  apply lt_S_n in H0.
+  done.
+  done.
+  intro.
+  rewrite x0.
+  rewrite Bool.andb_false_r.
+  done.
+  simpl.
+  rewrite -minus_n_O.
+  simpl in a.
+  rewrite -NPeano.Nat.add_sub_assoc in a.
+  Search _(S _ - S _).
+  rewrite (NPeano.Nat.sub_succ (length lu) 0) in a.
+  rewrite -minus_n_O in a.
+  rewrite -plus_assoc.
+  rewrite -NPeano.Nat.add_sub_assoc.
+(*I'm here. Nearly done. -- Chet*)  
+
+
+  admit.
+  admit.
+  admit.
+  intro.
+  rewrite x0.
   simpl.
   (*We have i < i + length lu - 1 < v => i < v => beq_nat i v = false*)
   have:(beq_nat i v = false).
   admit.
-  intro.
+  intro x2.
   rewrite x2.
   done.
   intro.
@@ -558,6 +593,10 @@ Proof.
   have:(substitution i (nth (v - (i + 1)) lu (Var v)) u = (nth (v - (i + 1)) lu (Var v))).
   apply no_index_sub.
   apply H.
+  rewrite plus_comm.
+  rewrite plus_comm in b.
+  apply leb_iff in b.
+  Search "minus".
   (*trivial*)
   admit.
   intros.
