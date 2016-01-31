@@ -524,12 +524,23 @@ Proof.
   rewrite -minus_n_O in a.
   rewrite -plus_assoc.
   rewrite -NPeano.Nat.add_sub_assoc.
-(*I'm here. Nearly done. -- Chet*)  
+  rewrite (plus_comm 1 (length lu)).
+  rewrite -NPeano.Nat.add_sub_assoc.
+  rewrite minus_diag.
+  rewrite -plus_n_O.
+  rewrite a.
+  rewrite Bool.andb_false_r.
+  done.  
+  done.
+  Search _(?x<=?x +_).
+  apply le_plus_l.
+  Search "le" "S".
+  apply le_n_S.
+  Search "le".
+  apply le_0_n.
 
+(*Done. -- Chet*)  
 
-  admit.
-  admit.
-  admit.
   intro.
   rewrite x0.
   simpl.
