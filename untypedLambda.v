@@ -436,13 +436,6 @@ Proof.
   intros.
   rewrite H3.
   simpl.
-  Search _(0<_).
-  done.
-  apply H0.
-  case (dic (leb (i + 1) v)).
-  intro h1.
-  rewrite h1.
-  simpl.
   
   
 Abort.
