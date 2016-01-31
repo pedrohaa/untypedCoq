@@ -1,4 +1,4 @@
-Require Import ssreflect.
+Require Import ssreflect Arith.
 Require Import Arith.EqNat.
 Require Import Arith.Compare_dec.
 Require Import List.
@@ -80,12 +80,19 @@ Proof.
   done.  
 Qed.
   
+
+
+
+(*Deprecated*)
 Fixpoint increase_k_fv (k: nat) (n:nat) (t:term): term :=
   match t with
     | Var v => if leb n v then Var (v+k) else Var v 
     | App t1 t2 => App (increase_k_fv k n t1) (increase_k_fv k n t2)
     | Lambda t1 => Lambda (increase_k_fv k (n+1) t1)
   end.
+
+
+
 
 (*
  ^ k
@@ -99,12 +106,17 @@ Fixpoint lifting (n: nat) (k: nat) (t: term): term :=
     | Lambda t1 => Lambda (lifting n (k+1) t1)
   end.
 
+
+
+(*Deprecated*)
 Fixpoint substitution_aux (k: nat) (i: nat) (t1: term) (t2: term): term :=
   match t1 with
     | Var v => if beq_nat i v then lifting k 0 t2 else Var v
     | App t3 t4 => App (substitution_aux k i t3 t2) (substitution_aux k i t4 t2)
     | Lambda t3 => Lambda (substitution_aux (k+1) (i+1) t3 t2)
   end.
+
+
 
 
 Fixpoint substitution (i: nat) (t1: term) (t2: term): term :=
@@ -182,12 +194,14 @@ Fixpoint lift_all (n: nat) (k: nat) (l: list term): list term :=
     | x :: xs => (lifting n k x) :: (lift_all n k xs)
   end.
 
-Fixpoint multiple_substitution (t: term) (lt: list term) (i: nat) (length: nat): term :=
+Fixpoint multiple_substitution (t: term) (lu: list term) (i: nat) (length: nat): term :=
   match t with
-    | Var v => if (leb i v) && (leb v (i+length-1)) then substitution v (Var v) (nth (v - i) lt (Var v))  else Var v
-    | App t1 t2 => App (multiple_substitution t1 lt i length) (multiple_substitution t2 lt i length)
-    | Lambda t1 => Lambda (multiple_substitution t1 (lift_all 1 0 lt) (i+1) length)
+    | Var v => if (leb i v) && (leb v (i+length-1)) then substitution v (Var v) (nth (v - i) lu (Var v))  else Var v
+    | App t1 t2 => App (multiple_substitution t1 lu i length) (multiple_substitution t2 lu i length)
+    | Lambda t1 => Lambda (multiple_substitution t1 (lift_all 1 0 lu) (i+1) length)
   end.
+
+
 
 Lemma dic: forall b : bool, (b = false) \/ (b = true).
 Proof.
@@ -245,6 +259,7 @@ Proof.
   Search _ (_ < _).
   intro.
   rewrite H in h0.
+  Search "lt_irrefl".
   apply Lt.lt_irrefl in h0.
   done.
   move => h.
@@ -323,8 +338,118 @@ Proof.
   apply H.
 Qed.
 
+Check nth.
+Check hd.
+Lemma mult_sub_inv_bisbis: forall (t:term) (lu:list term) (i k:nat),
+  (1 <= k) -> (k < length lu) -> C i (nth k lu (Var 0)) -> 
+  multiple_substitution t lu i (length lu) = substitution i (multiple_substitution t (tl lu) (i+1) (length lu - 1)) (hd (Var 0) lu).
+
+Proof.
+  induction t.
+  intros.
+  simpl.
+  have: beq_nat v v = true.
+  Search "beq".
+  rewrite (beq_nat_refl v).
+  done.
+  intro h.
+  rewrite h.
+  destruct h.
+  case (dic (leb i v)).
+
+  intro h1.
+  rewrite h1.
+  simpl.
+  have: leb (i+1) v = false.
+  move:h1.
+  rewrite ?leb_iff_conv.
+  Search "plus_comm".
+  rewrite plus_comm.
+  simpl.
+  Search _(?x < ?y -> ?x < S ?y).
+  apply lt_S.
+  intro h2.
+  rewrite h2.
+  simpl.
+  apply leb_iff_conv in h1.
+  Search "beq".
+  Search _(?x<?y -> ?x<>?y).
+  Search "lt_neq".
+  apply NPeano.Nat.lt_neq in h1.
+  Search _(?x<>?y -> ?y<>?x).
+  apply not_eq_sym in h1.
+  apply beq_nat_false_iff in h1.
+  rewrite h1.
+  done.
+  intro.
+  rewrite H2.
+  simpl.
+  case (dic (leb v (i+length lu - 1))).
+  intro h.
+  rewrite h.
+  rewrite <-plus_comm.
+  Search "plus".
+  simpl.
+  Search "minus".
+  rewrite -minus_n_O.
+  Search "assoc".
+  rewrite -NPeano.Nat.add_sub_assoc in h.
+  rewrite h.
+  Search "false".
+  rewrite Bool.andb_false_r.
+  simpl.
+  induction lu.
+  simpl in H0.
+  Search "n_0".
+  apply lt_n_0 in H0.
+  done.
+  simpl in h.
+  rewrite -minus_n_O in h.
+  Search "leb_iff".
+  apply leb_iff_conv in h.
+  have: beq_nat i v = false.
+  rewrite beq_nat_false_iff.
+  apply leb_iff in H2.
+  Search "le_lt_add_l".
+  Search _(_<>_).
+  apply NPeano.Nat.lt_neq.
+  Check length lu.
+  apply (NPeano.Nat.le_lt_add_lt 0 (length lu)).
+  Search _(0<=_).
+  apply le_0_n.
+
+  rewrite (plus_comm v 0).
+  simpl.
+  done.
+  intro h1.
+  rewrite h1.
+  done.
+  Search _(?x<_->S ?x<=_).
+  apply le_lt_n_Sm in H.
+  apply lt_le_S in H0.
+  Search "le_trans".
+  apply (lt_le_trans 1 (S k) (length lu)) in H0.
+  Search "lt_le".
+  apply lt_le_weak.
+  done.
+  done.
+  intros.
+  rewrite H3.
+  simpl.
+  Search _(0<_).
+  done.
+  apply H0.
+  case (dic (leb (i + 1) v)).
+  intro h1.
+  rewrite h1.
+  simpl.
+  
+  
+Abort.
+
 Lemma mult_sub_inv_bis: forall (t u:term) (lu:list term) (i k: nat),
-  (k < length lu) -> (length lu >= 1)-> (forall (j:nat) (u:term), (j < length lu) -> C i (nth j lu u)) -> multiple_substitution t (u :: lu) i (length lu) = substitution i (multiple_substitution t (lu) (i+1) (length lu - 1)) (u). 
+  (k < length lu) -> (length lu >= 1)-> (forall (j:nat) (u:term), (j < length lu) -> C i (nth j lu u)) -> 
+  multiple_substitution t (u :: lu) i (length lu) = substitution i (multiple_substitution t (lu) (i+1) (length lu - 1)) (u). 
 Proof.
   induction t.
   intros.
