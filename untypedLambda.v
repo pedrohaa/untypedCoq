@@ -483,9 +483,8 @@ Proof.
   reflexivity.  
 Qed.
 
-
 Lemma mult_sub_inv_bis: forall (t u:term) (lu:list term) (i: nat),
- (0 < length lu) -> (forall (j:nat) (u:term), (j < length lu) -> C i (nth j lu u)) -> multiple_substitution t (u :: lu) i (length lu) = substitution i (multiple_substitution t (lu) (i+1) (length lu - 1)) (u).
+ (0 < length lu) -> (forall (j:nat) (u:term), (j < length lu) -> C i (nth j lu u)) -> multiple_substitution t (u :: lu) i (length lu + 1) = substitution i (multiple_substitution t (lu) (i+1) (length lu)) (u).
 Proof.
   induction t.
   intros.
@@ -527,7 +526,7 @@ Proof.
   reflexivity.
   intro h3.
   rewrite h3.
-  have:(leb i (i + length lu -1) = true).
+  have:(leb i (i + (length lu+1) -1) = true).
   apply leb_iff.
   omega.
   intro h4.
@@ -554,11 +553,11 @@ Proof.
   simpl.
   apply leb_iff in b.
   apply le_lt_or_eq_iff in b.
-  have:i + length lu - 1 = i + 1 + (length lu - 1) - 1.
+  have:i + 1 + length lu - 1 = i + (length lu + 1) - 1.
   omega.
   intro h2.
   rewrite -h2.
-  have:(leb v (i + length lu - 1) = false) \/ leb v (i + length lu - 1) = true.
+  have:(leb v (i + 1 + length lu - 1) = false) \/ leb v (i + 1 + length lu - 1) = true.
   apply dic.
   intro h0.
   case:h0.
@@ -631,26 +630,91 @@ Proof.
   done.
   done.
 Qed.
-
+  
 Lemma mult_sub_inv: forall (t u:term) (lu:list term) (i: nat),
- (forall (j:nat) (u:term), (j < length lu) -> C i (nth j lu u)) -> multiple_substitution t (u :: lu) i (length lu) = substitution i (multiple_substitution t (lu) (i+1) (length lu - 1)) (u).
+ (forall (j:nat) (u:term), (j < length lu) -> C i (nth j lu u)) -> multiple_substitution t (u :: lu) i (1 + length lu) = substitution i (multiple_substitution t (lu) (i+1) (length lu)) (u).
 Proof.
-  intros.
   induction (lu).
-  simpl.
-  apply mult_sub_inv_bis.
-  simpl.
+  move:u.
+  induction t.
+  intros.
+  rewrite id_substitution.
+  unfold multiple_substitution.
+  have:i + 1 - 1 = i.
   omega.
-  admit.
+  intro h0.
+  rewrite h0.
+  have: ((leb i v && leb v i)%bool = false) \/ (leb i v && leb v i)%bool = true. 
+  apply dic.
+  intro h1.
+  case:h1.
+  intro h1.
+  rewrite h1.
   simpl.
-  apply mult_sub_inv_bis.
+  apply Bool.andb_false_iff in h1.
+  case:h1.
+  intro h1.
+  apply leb_iff_conv in h1.
+  have: beq_nat i v = false.
+  apply beq_nat_false_iff.
+  omega.
+  intro h2.
+  rewrite h2.
+  trivial.
+  intro h1.
+  apply leb_iff_conv in h1.
+  have: beq_nat v i = false.
+  apply beq_nat_false_iff.
+  omega.
+  intro h2.
+  apply beq_nat_false_iff in h2.
+  apply not_eq_sym in h2.
+  apply beq_nat_false_iff in h2.
+  rewrite h2.
+  trivial.
+  intro h1.
+  rewrite h1.
+  apply Bool.andb_true_iff in h1.
+  have: i = v.
+  destruct h1 as [h1 h2].
+  apply leb_iff in h1.
+  apply leb_iff in h2.
+  omega.
+  intro h2.
+  have : v - i = 0.
+  omega.
+  intro h3.
+  rewrite h3.
+  simpl.
+  rewrite h2.
+  trivial.
+  intros.
+  simpl.
+  rewrite -lambda_equivalence.
+  apply IHt.
+  intros.
+  apply ind_C_pred.
+  apply H.
+  trivial.
+  intros.
+  simpl.
+  rewrite app_equivalence.
+  split.
+  apply IHt1.
+  done.
+  apply IHt2.
+  done.
+  intros.
+  rewrite plus_comm.
+  apply (mult_sub_inv_bis t u (a::lu) i).
   simpl.
   omega.
   intros.
   apply H.
   done.
 Qed.
-  (*new part*)
+
+(*new part*)
 
 Inductive reducesInOneTo: term -> term -> Prop :=
   | appLeft: forall (t u v: term), reducesInOneTo t u -> reducesInOneTo (App t v) (App u v)  
