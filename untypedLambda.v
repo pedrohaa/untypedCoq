@@ -462,11 +462,6 @@ Proof.
   omega.
 Qed.
 
-Lemma lt_sub_pass: forall (n m p: nat), n < m + p -> n - p < m.
-Proof.
-  admit.
-Qed.
-
 Lemma minus_dist: forall (n m p: nat), n - (m+p) = (n-m) - p.
 Proof.
   intros.
