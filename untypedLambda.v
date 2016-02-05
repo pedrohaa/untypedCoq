@@ -2,6 +2,7 @@ Require Import ssreflect Arith.
 Require Import Arith.EqNat.
 Require Import Arith.Compare_dec.
 Require Import List.
+Require Import Omega.
 
 Definition var := nat.
 
@@ -373,7 +374,6 @@ Proof.
   simpl.
   apply leb_iff_conv in h1.
   Search "beq".
-  Search _(?x<?y -> ?x<>?y).
   Search "lt_neq".
   apply NPeano.Nat.lt_neq in h1.
   Search _(?x<>?y -> ?y<>?x).
@@ -440,8 +440,52 @@ Proof.
   
 Abort.
 
+Lemma lt_plus_l: forall (n m p: nat), n + p < m -> n < m.
+Proof.
+  induction n.
+  induction m.
+  simpl.
+  intros.
+  apply lt_n_0 in H.
+  done.
+  simpl.
+  intros.
+  Search _ (_<_).
+  apply lt_0_Sn.
+  intros.
+  omega.
+Qed.
+
+Lemma le_plus_l: forall (n m p: nat), n + p <= m -> n <= m.
+Proof.
+  intros.
+  omega.
+Qed.
+
+Lemma lt_sub_pass: forall (n m p: nat), n < m + p -> n - p < m.
+Proof.
+  admit.
+Qed.
+
+Lemma minus_dist: forall (n m p: nat), n - (m+p) = (n-m) - p.
+Proof.
+  intros.
+  omega.
+Qed.
+
+Lemma lift_inv: forall (lu:list term), length lu = length (lift_all 1 0 lu).
+Proof.
+  induction lu.
+  simpl.
+  reflexivity.
+  simpl.
+  rewrite IHlu.
+  reflexivity.  
+Qed.
+
+
 Lemma mult_sub_inv_bis: forall (t u:term) (lu:list term) (i: nat),
- (forall (j:nat) (u:term), (j < length lu) -> C i (nth j lu u)) -> multiple_substitution t (u :: lu) i (length lu) = substitution i (multiple_substitution t (lu) (i+1) (length lu - 1)) (u).
+ (0 < length lu) -> (forall (j:nat) (u:term), (j < length lu) -> C i (nth j lu u)) -> multiple_substitution t (u :: lu) i (length lu) = substitution i (multiple_substitution t (lu) (i+1) (length lu - 1)) (u).
 Proof.
   induction t.
   intros.
@@ -451,186 +495,129 @@ Proof.
   apply ( beq_nat_refl v).
   intro.
   rewrite -x.
-  have:((leb i v = false) \/ (leb i v = true)).
-  apply (dic (leb i v)).
+  have:((leb (i+1) v = false) \/ (leb (i+1) v = true)).
+  apply (dic (leb (i+1) v)).
   intro.
   case:x0.
   move => h0.
   rewrite h0.
   simpl.
-  have:(leb (i + 1) v = false).
-  Search "ltb".
-  apply leb_correct_conv.
-  apply (leb_iff_conv v i) in h0.
-  Search _ (_<_).
-  apply (Plus.lt_plus_trans).
-  done.
-  move => h1.
-  rewrite h1.  
-  simpl.
-  Search "beq".
-  have:(beq_nat i v = false).
-  apply beq_nat_false_iff.
-  intro.
-  rewrite H0 in h0.
   apply leb_iff_conv in h0.
-  apply Lt.lt_irrefl in h0.
-  done.
-  intro.
-  rewrite x0.
-  done.
-  move => h0.
-  rewrite h0.
-  simpl.
-  have:(leb v (i + length lu - 1) = false \/ leb v (i + length lu - 1) = true).
-  apply dic.
-  intros.
-  case:x0.
-  intro.
-  rewrite a.
-  have:(leb (i+1) v && leb v (i + 1 + (length lu - 1) - 1))%bool = false.
-  
-  (*I have to simplify the expression*)
-  induction lu.
-  simpl.
-  rewrite -plus_n_O.
-  case (dic (leb (i+1) v)).
-  intro.
-  rewrite H0.
-  done.
-  intro.
-  have: leb v (i+1-1) = false.
-  rewrite -NPeano.Nat.add_sub_assoc.
-  simpl.
-  rewrite -plus_n_O.
-  rewrite leb_iff_conv.
-  apply leb_iff in H0.
-  rewrite plus_comm in H0.
-  Search "lt" "S".
-  apply le_lt_n_Sm in H0.
-  apply lt_S_n in H0.
-  done.
-  done.
-  intro.
-  rewrite x0.
-  rewrite Bool.andb_false_r.
-  done.
-  simpl.
-  rewrite -minus_n_O.
-  simpl in a.
-  rewrite -NPeano.Nat.add_sub_assoc in a.
-  Search _(S _ - S _).
-  rewrite (NPeano.Nat.sub_succ (length lu) 0) in a.
-  rewrite -minus_n_O in a.
-  rewrite -plus_assoc.
-  rewrite -NPeano.Nat.add_sub_assoc.
-  rewrite (plus_comm 1 (length lu)).
-  rewrite -NPeano.Nat.add_sub_assoc.
-  rewrite minus_diag.
-  rewrite -plus_n_O.
-  rewrite a.
-  rewrite Bool.andb_false_r.
-  done.  
-  done.
-  Search _(?x<=?x +_).
-  apply le_plus_l.
-  Search "le" "S".
-  apply le_n_S.
-  Search "le".
-  apply le_0_n.
-
-(*Done. -- Chet*)  
-
-  intro.
-  rewrite x0.
-  simpl.
-  (*We have i < i + length lu - 1 < v => i < v => beq_nat i v = false*)
-  have:(beq_nat i v = false).
-  admit.
-  intro x2.
-  rewrite x2.
-  done.
-  intro.
-  have:(i <= v).
-  Search "leb".
-  apply leb_iff.
-  done.
-  move => h1.
-  apply Lt.le_lt_or_eq_iff in h1.
-  apply or_comm in h1.
-  case h1.
-  intro.
-  have:(i - i = 0).
-  Search _ (_-_).
-  apply Minus.minus_diag.
-  intro.
-  rewrite -H0.
-  rewrite x0.
-  have:(leb (i+1) i = false).
-  Search "leb".
-  apply leb_iff_conv.
+  have:(v < i)\/(v=i).
   Search _ (_<_).
-  rewrite Plus.plus_comm.
-  apply Lt.lt_n_Sn.
-  intro.
-  rewrite x1.
-  simpl.
-  rewrite -beq_nat_refl.
-  have:(leb i (i + length lu - 1) = true).
-  apply leb_iff.
-  (*Since length lu - 1 > 0, we have the inequality*)
-  admit.
-  intro.
-  rewrite x2.
+  apply le_lt_or_eq.
+  rewrite ->plus_comm in h0.
+  apply lt_n_Sm_le in h0.
   done.
-  intros.
-  (*since m >= i, S m - i will be a natural number*)
-  have:(v - i > 0).
-  Search _ (_>_).
-  admit.
+  intro h1.
+  apply or_comm in h1.
+  case:h1.
+  intro h1.
+  rewrite h1.
+  rewrite minus_diag.
+  Search "leb".
+  have:(leb i i = true).
+  apply leb_iff.
+  apply le_refl.
+  intro h2.
+  rewrite h2.
+  simpl.
+  have:(beq_nat i i = true).
+  apply beq_nat_true_iff.
+  reflexivity.
+  intro h3.
+  rewrite h3.
+  have:(leb i (i + length lu -1) = true).
+  apply leb_iff.
+  omega.
+  intro h4.
+  rewrite h4.
+  done.
+  intro.
+  have:leb i v = false.
+  apply leb_iff_conv.
+  done.
+  intro.
+  rewrite x0.
+  simpl.
+  have:beq_nat i v = false.
+  rewrite beq_nat_false_iff.
+  intro.
+  rewrite H1 in b.
+  apply lt_irrefl in b.
+  done.
+  intro h1.
+  rewrite h1.
+  done.
   intro.
   rewrite b.
-  have:(exists m, v - i = 1+m).
-  admit.
-  intro.
-  case x1.
-  intros.
-  rewrite H1.
   simpl.
-  have:((leb (i + 1) v && leb v (i + 1 + (length lu - 1) - 1))%bool = true).
-  admit.
-  intro.
-  rewrite x3.
-  have:(substitution i (nth (v - (i + 1)) lu (Var v)) u = (nth (v - (i + 1)) lu (Var v))).
-  apply no_index_sub.
-  apply H.
-  rewrite plus_comm.
-  rewrite plus_comm in b.
   apply leb_iff in b.
-  Search "minus".
-  (*trivial*)
-  admit.
-  intros.
-  rewrite x4.
-  have:(v - (i + 1) = x2).
-  admit.
+  apply le_lt_or_eq_iff in b.
+  have:i + length lu - 1 = i + 1 + (length lu - 1) - 1.
+  omega.
+  intro h2.
+  rewrite -h2.
+  have:(leb v (i + length lu - 1) = false) \/ leb v (i + length lu - 1) = true.
+  apply dic.
+  intro h0.
+  case:h0.
+  intro h1.
+  rewrite h1.
+  Search _ (_&&_)%bool "comm".
+  rewrite Bool.andb_comm.
+  simpl.
+  have:(beq_nat i v = false). 
+  rewrite beq_nat_false_iff.
   intro.
-  rewrite x5.
+  rewrite H1 in b.
+  case b.
+  intro.
+  omega.
+  omega.
+  intro h3.
+  rewrite h3.
   done.
+  intro h1.
+  rewrite h1.
+  rewrite Bool.andb_comm.
+  simpl.
+  have:leb i v = true.
+  have:(i+1) <= v.
+  Search _ (_<=_) "or".
+  apply le_lt_or_eq_iff.
+  done.
+  intro h3.
+  apply leb_iff.
+  apply (le_plus_l i v 1).
+  done.
+  intro h3.
+  rewrite h3.
+  rewrite NPeano.Nat.sub_add_distr.
+  destruct (v - i) eqn:h4.
+  apply NPeano.Nat.sub_0_le in h4.
+  omega.
+  simpl.
+  rewrite -minus_n_O.
+  symmetry.
+  apply no_index_sub.
+  apply H0.
+  apply leb_iff in h1.
+  apply leb_iff in h3.
+  omega.
   intros.
   simpl.
   rewrite -lambda_equivalence.
   (*Find a way to deal with the lifting operation*)
-  have:(length lu = length (lift_all 1 0 lu)).
-  admit.
-  move => h0.
-  rewrite h0.
+  rewrite lift_inv.
   apply (IHt (lifting 1 0 u) (lift_all 1 0 lu) (i+1)).
-  rewrite -h0.
+  rewrite -lift_inv.
+  done.
   intros.
+  rewrite -lift_inv in H1.
   rewrite (extract_lifting).
   apply lift_free.
-  apply H.
+  apply H0.
   done.
   done.
   intros.
@@ -639,11 +626,31 @@ Proof.
   split.
   apply (IHt1 u lu i).
   done.
+  done.
   apply (IHt2 u lu i).
   done.
+  done.
 Qed.
-                                                                                                        
-(*new part*)
+
+Lemma mult_sub_inv: forall (t u:term) (lu:list term) (i: nat),
+ (forall (j:nat) (u:term), (j < length lu) -> C i (nth j lu u)) -> multiple_substitution t (u :: lu) i (length lu) = substitution i (multiple_substitution t (lu) (i+1) (length lu - 1)) (u).
+Proof.
+  intros.
+  induction (lu).
+  simpl.
+  apply mult_sub_inv_bis.
+  simpl.
+  omega.
+  admit.
+  simpl.
+  apply mult_sub_inv_bis.
+  simpl.
+  omega.
+  intros.
+  apply H.
+  done.
+Qed.
+  (*new part*)
 
 Inductive reducesInOneTo: term -> term -> Prop :=
   | appLeft: forall (t u v: term), reducesInOneTo t u -> reducesInOneTo (App t v) (App u v)  
@@ -866,7 +873,11 @@ Fixpoint tau_code (c: code): term :=
     | (cCons Grab c0) => Lambda (tau_code c0)
   end.
 
-Fixpoint tau_env (e: env): 
+Fixpoint tau_env (e: env): term :=
+  match e with
+    | nul
+    |
+  end
 
 
 
