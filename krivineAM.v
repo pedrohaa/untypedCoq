@@ -67,19 +67,24 @@ Fixpoint tau_env (e: environment): list term :=
 
 Check state.
 
-Fixpoint transform_stk (stk: environment): term :=
+Fixpoint transform_stk (stk: environment): list term :=
   match stk with
-      | cons (c0, e0) nul => multiple_substitution (tau_code c0) (tau_env e0) 0 (length (tau_env e0))
-      | cons (c0, e0) e1 => App (multiple_substitution (tau_code c0) (tau_env e0) 0 (length (tau_env e0))) (transform_stk e1)
-      | _ => Var 0
+      | cons (c0, e0) nul => multiple_substitution (tau_code c0) (tau_env e0) 0 (length (tau_env e0)) :: nil
+      | cons (c0, e0) e1 => (multiple_substitution (tau_code c0) (tau_env e0) 0 (length (tau_env e0))) :: (transform_stk e1)
+      | nul => nil
   end.
+
+Check fold_left.
+
+Fixpoint fold_left_bis (f: term -> term -> term) (l:list term): term :=
+  fold_left f (removelast l) (last l (Var 0)).
 
 Fixpoint tau (s: state): term :=
   match s with
     | (c, e, stk) =>
       match stk with
         | nul => multiple_substitution (tau_code c) (tau_env e) 0 (length (tau_env e))
-        | stk => App (multiple_substitution (tau_code c) (tau_env e) 0 (length (tau_env e))) (transform_stk stk)
+        | stk => fold_left_bis (fun t1 t2 => App t1 t2) (multiple_substitution (tau_code c) (tau_env e) 0 (length (tau_env e)) :: (transform_stk stk))
       end
   end.
 
@@ -281,6 +286,8 @@ Proof.
   apply sym.
   intros.
   destruct p.
+  simpl in H.
+  destruct H as [h0 [h1 [h2 h3]]].
   apply red_equivalence.
   exists 0.
   simpl.
