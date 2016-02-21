@@ -76,15 +76,12 @@ Fixpoint transform_stk (stk: environment): list term :=
 
 Check fold_left.
 
-Fixpoint fold_left_bis (f: term -> term -> term) (l:list term): term :=
-  fold_left f (removelast l) (last l (Var 0)).
-
 Fixpoint tau (s: state): term :=
   match s with
     | (c, e, stk) =>
       match stk with
         | nul => multiple_substitution (tau_code c) (tau_env e) 0 (length (tau_env e))
-        | stk => fold_left_bis (fun t1 t2 => App t1 t2) (multiple_substitution (tau_code c) (tau_env e) 0 (length (tau_env e)) :: (transform_stk stk))
+        | stk => fold_left (fun t1 t2 => App t1 t2) (transform_stk stk) (multiple_substitution (tau_code c) (tau_env e) 0 (length (tau_env e)))
       end
   end.
 
@@ -278,30 +275,232 @@ Proof.
   apply transition_inv_3.
 Qed.
 
-Lemma toy_lemma: forall (c c0: code) (e s: environment), correct_state (cCons (Push c0) c,e,s) -> reduces (tau (cCons (Push c0) c,e,s)) (tau (c, e, cons (c0, e) s)).
+Lemma correct_reduction_1: forall (c c0: code) (e s: environment), correct_state (cCons (Push c0) c,e,s) -> reduces (tau (cCons (Push c0) c,e,s)) (tau (c, e, cons (c0, e) s)).
 Proof.
   intros.
   simpl.
   case s.
+  simpl.
   apply sym.
   intros.
   destruct p.
   simpl in H.
-  destruct H as [h0 [h1 [h2 h3]]].
-  apply red_equivalence.
-  exists 0.
   simpl.
-  done.
+  apply sym.
 Qed.
 
-Theorem correct_confluence: forall s: state, correct_state s -> reduces (tau s) (tau (exec_inst s)).
+Lemma correct_reduction_2: forall (c c0: code) (e e0 s: environment),correct_state ((cCons (Access 0) c, cons (c0,e0) e, s)) -> reduces (tau (cCons (Access 0) c, cons (c0,e0) e, s)) (tau (c0, e0, s)).
 Proof.
-  induction s.
-  destruct a.
+  simpl.
+  intros.
+  case s.
+  apply sym.
+  intros.
+  apply sym.
+Qed.  
+  
+Lemma correct_reduction_3: forall (c c0: code) (e e0 s: environment) (n: nat), (n > 0) -> correct_state (cCons (Access n) c, cons (c0,e0) e, s) -> reduces (tau (cCons (Access n) c, cons (c0,e0) e, s)) (tau (exec_inst (cCons (Access n) c, cons (c0,e0) e, s))).
+Proof.
+  unfold exec_inst.
+  intros c c0 e e0 s n.
+  case n.
+  omega.
+  intros.
+  case s.
+  case e.
+  simpl.
+  have:forall n, (beq_nat n n = true).
+  intro.
+  apply beq_nat_true_iff.
+  reflexivity.
+  intro.
+  case n0.
+  simpl.
+  admit.
+  simpl.
+  simpl in H0.
+  rewrite -(x n0).
+
+
+
+
+  
+  destruct H0.
+  simpl.
+  intros c c0 e e0 s n.
+  case s.
   simpl.
 
 
+  
+  simpl.
+  intros.
+  case s.
+  have:forall n, (beq_nat n n = true).
+  intro.
+  apply beq_nat_true_iff.
+  reflexivity.
+  intro.
+  rewrite (x n).
+  rewrite (x (n-1)).
+  apply sym.
+  intros.
+  simpl.
+  apply sym.
+Qed.
 
+Lemma correct_reduction_4: forall (c c0: code) (e e0 s: environment), correct_state (cCons Grab c, e, cons (c0,e0) s) -> reduces (tau (cCons Grab c, e, cons (c0,e0) s)) (tau (c, cons (c0,e0) e, s)).
+Proof.
+  intros.
+  case s.
+  simpl in H.
+  destruct H as [h0 [h1 h2]].
+  destruct h1.
+  destruct H0.
+  simpl.
+  rewrite red_equivalence.
+  exists 1.
+  simpl.
+  exists (substitution 0 (multiple_substitution (tau_code c) (lift_all 1 0 (tau_env e)) 1
+                (Datatypes.length (tau_env e))) (multiple_substitution (tau_code c0) (tau_env e0) 0
+             (Datatypes.length (tau_env e0)))).
+  split.
+  apply removeLamb.
+  rewrite mult_sub_inv.
+  admit.
+  admit.
+  admit.
+Qed.
+(*Lemma toy: forall (i: inst) (c: code) (e b: environment), reduces (tau (c, e, b)) (tau (exec_inst (c, e, b))) <-> reduces (tau (cCons i c, e, b)) (tau (exec_inst (cCons i c, e, b))).
+Proof.
+  split.
+  case i.
+  move: c e b.
+  intros c e b n.
+  move: c e b.
+  induction n.
+  intros c e b.
+  case e.
+  intro.
+  apply sym.
+  intros.
+  destruct p.
+  apply sym.
+  intros c e b.
+  case e.
+  intros.
+  apply sym.
+  intros.
+  destruct p.
+  unfold exec_inst.
+  apply sym.
+  simpl.  
+  simpl.
+*)
+  
+Theorem correct_confluence: forall s: state, correct_state s -> reduces (tau s) (tau (exec_inst s)).
+Proof.
+  intro s.
+  destruct s as ((c, e), s).
+  move: e s.
+  induction c.
+  intros.
+  apply sym.
+  case i.
+  intros n e s.
+  case e.
+  case n.
+  intros.
+  unfold exec_inst.
+  apply sym.
+  intros.
+  apply sym.
+  case n.
+  intros.
+  destruct p.
+  unfold exec_inst.
+  apply sym.
+  intros.
+  destruct p.
+  unfold exec_inst.
+  apply correct_reduction_3.
+
+
+
+
+  induction n.
+  intros.
+  case e.
+  unfold exec_inst.
+  apply sym.
+  intros; destruct p.
+  apply sym.
+  intros e s.
+  case e.
+  unfold exec_inst.
+  intros.
+  apply sym.
+  case s.
+  intros; destruct p.
+  unfold exec_inst.
+  simpl.
+  have:beq_nat n n = true.
+  admit.
+  intros.
+  rewrite x.
+  have:(n-0 = n).
+  omega.
+  intro.
+  rewrite x0.
+  rewrite x.
+  rewrite x0.
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+
+  
+  case b.
+  simpl.
+  intro.
+  apply sym.
+  intros.
+  apply sym.
+  intros.
+  move:e b H.
+  case i.
+
+  intros.
+  case n.
+  unfold exec_inst.
+  case e.
+  apply sym.
+  intros.
+  destruct p.
+  apply correct_reduction_2.
+  unfold correct_state.
+  unfold correct_state in H.
+  destruct H as [h0 [h1 h2]].
+  split.
+  simpl.
+  
+  apply correct_reduction_2.
+
+
+
+
+
+
+  
   (*Unify every transition*)
 
 
