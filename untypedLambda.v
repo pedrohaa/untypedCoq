@@ -6,12 +6,19 @@ Require Import Omega.
 
 Definition var := nat.
 
+Set Printing Universes.
+
+(* term is of (higher) type Set since nat is of type Set*)
+
 Inductive term :=
 | Var : var -> term
 | Lambda: term -> term
 | App: term -> term -> term.
 
+
 Check Lambda ( Lambda (Var 1)).
+
+
 
 Lemma lambda_equivalence: forall t u: term, t = u <-> (Lambda t = Lambda u).
 Proof.
@@ -170,7 +177,7 @@ Fixpoint lift_all (n: nat) (k: nat) (l: list term): list term :=
 
 Fixpoint multiple_substitution (t: term) (lu: list term) (i: nat) (length: nat): term :=
   match t with
-    | Var v => if (leb i v) && (leb v (i+length-1)) then substitution v (Var v) (nth (v - i) lu (Var v))  else Var v
+    | Var v => if (leb i v) && (leb v (i+length-1)) then substitution v (Var v) (nth (v - i) lu (Var 0))  else Var v
     | App t1 t2 => App (multiple_substitution t1 lu i length) (multiple_substitution t2 lu i length)
     | Lambda t1 => Lambda (multiple_substitution t1 (lift_all 1 0 lu) (i+1) length)
   end.
@@ -204,9 +211,32 @@ Proof.
   done.
   move => h1.
   rewrite h1.
-  case (v - i).
+  move: h0.
+  case v.
+  intro.
+  Search "andb".
+  apply Bool.andb_true_iff in h0.
+  Search "leb_iff".
+  destruct h0 as [h0 h01].
+  apply leb_iff in h0.
+  apply leb_iff in h01.
+  simpl.
   done.
-  done.
+  case i.
+  intros.
+  apply Bool.andb_true_iff in h0.
+  destruct h0 as [h0 h01].
+  apply leb_iff in h0.
+  apply leb_iff in h01.
+  omega.
+  intros.
+  simpl.
+  apply Bool.andb_true_iff in h0.
+  destruct h0 as [h0 h01].
+  apply leb_iff in h0.
+  apply leb_iff in h01.
+  omega.
+
   intro.
   simpl.
   rewrite IHt.
