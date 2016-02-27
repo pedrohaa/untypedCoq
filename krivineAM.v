@@ -197,6 +197,34 @@ Inductive correct_stk : environment -> Prop :=
                   C (lenEnv e0) (tau_code c0) -> correct_stk e0 -> correct_stk e ->
                   correct_stk (cons c0 e0 e).
 
+Fixpoint corr_stk (stk: environment): Prop:=
+  match stk with
+    | nul => True
+    | cons c0 e0 e => ((correct_stk e0) /\ (correct_stk e) /\ (C (lenEnv e0) (tau_code c0))) 
+  end.
+
+
+Theorem ind_fix_corr: forall e:environment, correct_stk e <-> corr_stk e.
+Proof.
+  induction e.
+  simpl.
+  split.
+  trivial.
+  intro.
+  apply Correct_stk_nil.
+  simpl.
+  split.
+  intro.
+  inversion H.
+  tauto.
+  intros.
+  destruct H as [H0 [H1 H2]].
+  apply Correct_stk.
+  trivial.
+  trivial.
+  trivial.
+Qed.
+
 Definition correct_state (s: state): Prop:=
   match s with
    | (c, e, stk) => (correct_stk e) /\ (correct_stk stk) /\ (C (lenEnv e) (tau_code c))
