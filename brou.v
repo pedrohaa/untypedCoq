@@ -593,6 +593,13 @@ Proof.
   apply closed_env.
   trivial.
   intro.
+  
+  unfold tau_env.
+  case n0.
+  simpl.
+  apply sym.
+  intros.
+  simpl.
   rewrite mult_sub_clos.
   simpl in H0.
   destruct H0 as [[h1 [h2 h3]] [h4 h5]].

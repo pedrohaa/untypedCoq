@@ -208,7 +208,8 @@ Theorem ind_fix_corr: forall e:environment, correct_stk e <-> corr_stk e.
 Proof.
   induction e.
   simpl.
-  split;  trivial.
+  split.
+  trivial.
   intro.
   apply Correct_stk_nil.
   simpl.
@@ -218,7 +219,10 @@ Proof.
   tauto.
   intros.
   destruct H as [H0 [H1 H2]].
-  by (apply Correct_stk).
+  apply Correct_stk.
+  trivial.
+  trivial.
+  trivial.
 Qed.
 
 Definition correct_state (s: state): Prop:=
@@ -226,15 +230,213 @@ Definition correct_state (s: state): Prop:=
    | (c, e, stk) => (correct_stk e) /\ (correct_stk stk) /\ (C (lenEnv e) (tau_code c))
   end.
 
+Theorem transition_inv_1: forall (c c0: code) (e e0 stack: environment), correct_state ((cCons (Access 0) c, cons c0 e0 e, stack)) -> correct_state  (c0, e0, stack).
+Proof.
+  simpl.
+  intros.
+  split.
+  destruct H.
+  inversion H; trivial.
+  split.
+  apply H.
+  destruct H.
+  inversion H; trivial.
+Qed.
 
+Theorem transition_inv_2: forall (c c0: code) (e e0 stack: environment) (n: nat), (n > 0) -> correct_state (cCons (Access n) c, cons c0 e0 e, stack) -> correct_state (cCons (Access (n-1)) c, e, stack).
+Proof.
+  simpl.
+  intros.
+  split.
+  destruct H0.
+  inversion H0; trivial.
+  split.
+  apply H0.
+  destruct H0 as [h0 [h1 h2]].
+  omega.
+Qed.
 
+Theorem transition_inv_3: forall (c c0: code) (e stack: environment), correct_state (cCons (Push c) c0, e, stack) -> correct_state (c0, e, cons c e stack).
+Proof.
+  simpl.  
+  intros.
+  destruct H as [h1 [h2 [h3 h4]]].
+  split; trivial.
+  split.
+  apply Correct_stk.
+  done.
+  done.
+  done.
+  done.
+Qed.
 
+Theorem transition_inv_4: forall (c c0: code) (e e0 stack: environment), correct_state (cCons Grab c, e, cons c0 e0 stack) -> correct_state (c, cons c0 e0 e, stack).
+Proof.
+  simpl.
+  intros.
+  destruct H as [h1 [h2 h3]].
+  split.
+  apply Correct_stk.
+  inversion h2.
+  done.
+  by (inversion h2).
+  trivial.
+  split.
+  by (inversion h2).
+  by rewrite plus_comm in h3.
+Qed.
 
+Theorem correct_invariance: forall s: state, correct_state s -> correct_state (exec_inst s).
+Proof.
+  intro.
+  destruct s.
+  destruct p.
+  move: e e0.
+  induction c.
+  move => e e0.
+  case e0.
+  case e.
+  simpl.
+  done.
+  simpl.
+  done.
+  simpl.
+  done.
+  case i.
+  intros n e e0.
+  case e0.
+  case n.
+  simpl.
+  done.
+  simpl.
+  done.
+  intros c0 e1 e2.
+  unfold exec_inst.
+  case n.
+  apply transition_inv_1.
+  intro.
+  apply transition_inv_2.
+  omega.
+  unfold exec_inst.
+  intros e e0.
+  case e.
+  done.
+  intros c0 e1 e2.
+  apply transition_inv_4.
+  intros c0 e e0.
+  apply transition_inv_3.
+Qed.
 
+Lemma correct_reduction_1: forall (c c0: code) (e s: environment), correct_state (cCons (Push c0) c,e,s) -> reduces (tau (cCons (Push c0) c,e,s)) (tau (c, e, cons c0 e s)).
+Proof.
+  intros.
+  simpl.
+  case s.
+  simpl.
+  apply sym.
+  intros.
+  simpl in H.
+  simpl.
+  apply sym.
+Qed.
 
-(*###########################      VERY USEFUL RESULTS      #########################*)
+Lemma correct_reduction_2: forall (c c0: code) (e e0 s: environment),correct_state ((cCons (Access 0) c, cons c0 e0 e, s)) -> reduces (tau (cCons (Access 0) c, cons c0 e0 e, s)) (tau (c0, e0, s)).
+Proof.
+  simpl.
+  intros.
+  case s.
+  apply sym.
+  intros.
+  apply sym.
+Qed.  
 
-
+  
+Lemma correct_reduction_3: forall (c c0: code) (e e0 s: environment) (n: nat), (n > 0) -> correct_state (cCons (Access n) c, cons c0 e0 e, s) -> reduces (tau (cCons (Access n) c, cons c0 e0 e, s)) (tau (exec_inst (cCons (Access n) c, cons c0 e0 e, s))).
+Proof.
+  have:forall n:nat, beq_nat n n = true.
+  intro.
+  rewrite beq_nat_true_iff.
+  reflexivity.
+  intro h0.  
+  unfold correct_state.
+  intros c c0 e e0 s n.
+  induction n.
+  omega.
+  intros.
+  unfold exec_inst.
+  destruct H0 as [h1 [h2 h3]].
+  move:h1 h2 h3.
+  case s.
+  intros h1 h2 h3.
+  simpl.
+  rewrite ?h0.
+  rewrite -?(length_inv).
+  simpl in h3.
+  rewrite -?minus_n_O.
+  have:(leb n (lenEnv e - 1) = true).
+  apply leb_iff.
+  omega.
+  intro h4.
+  rewrite h4.
+  have:(lenEnv e > 0).
+  omega.
+  intro.
+  have:(exists n0:nat, lenEnv e = S n0).
+  exists (lenEnv e - 1).
+  omega.
+  intro.
+  case:x0.
+  intros.
+  rewrite p.
+  have:(leb n x0 = true).
+  apply leb_iff.
+  omega.
+  intro.
+  rewrite x1.
+  apply sym.
+  intros.
+  unfold tau.
+  rewrite NPeano.Nat.sub_succ.
+  rewrite -minus_n_O.
+  rewrite -?length_inv.
+  unfold tau_code.
+  unfold multiple_substitution.
+  rewrite -?minus_n_O.
+  have:forall n: nat, 0 + n = n.
+  intro.
+  omega.
+  intro.
+  rewrite ?x.
+  simpl in h3.
+  have: S n <= lenEnv (cons c0 e0 e) - 1.
+  simpl.
+  simpl in h3.
+  rewrite -minus_n_O.
+  omega.
+  intro.
+  apply leb_iff in x0.
+  rewrite length_inv in x0.
+  rewrite x0.
+  have: leb 0 (S n) = true.
+  apply leb_iff.
+  omega.
+  intro.
+  rewrite x1.
+  have: leb 0 n = true.
+  apply leb_iff.
+  omega.
+  intro.
+  rewrite x2.
+  have:(leb n (lenEnv e - 1) = true).
+  apply leb_iff.
+  omega.
+  intro.
+  rewrite length_inv in x3.
+  rewrite x3.
+  simpl.
+  rewrite ?h0.
+  apply sym.
+Qed.
 
 Definition c_list_i (i:nat) (lu: list term) : Prop :=
   forall k: nat, k < Datatypes.length lu -> C i (nth k lu (Var 0)).
@@ -345,7 +547,7 @@ Proof.
   omega.
 Qed.
 
-Lemma mult_sub_clos: forall (t: term) (u: list term) (i: nat), closed_list i u -> C (i+length u) t -> C i (multiple_substitution i t u).
+Lemma mult_sub_clos: forall (t: term) (u: list term) (i: nat), closed_list i u -> C (i+Datatypes.length u) t -> C i (multiple_substitution i t u).
 Proof.
   induction t.
   simpl.
@@ -491,223 +693,65 @@ Proof.
   by apply appLeft.
 Qed.
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-(*___________Correct transitions and reductions_____________*)
-
-
-
-
-Theorem transition_inv_1: forall (c c0: code) (e e0 stack: environment), correct_state ((cCons (Access 0) c, cons c0 e0 e, stack)) -> correct_state  (c0, e0, stack).
+Lemma correct_reduction_4: forall (c: code) (e s: environment), correct_state (cCons Grab c, e, s) -> reduces (tau (cCons Grab c, e, s)) (tau (exec_inst (cCons Grab c, e, s))).
 Proof.
+  intros c e s.
+  move: c e.
+  induction s.
   simpl.
   intros.
-  split.
-  destruct H.
-  by (inversion H).  
-  split.
-  apply H.
-  destruct H.
-  by (inversion H).
-Qed.
-
-Theorem transition_inv_2: forall (c c0: code) (e e0 stack: environment) (n: nat), (n > 0) -> correct_state (cCons (Access n) c, cons c0 e0 e, stack) -> correct_state (cCons (Access (n-1)) c, e, stack).
-Proof.
-  simpl.
+  apply sym.
   intros.
-  split.
-  destruct H0.
-  inversion H0; trivial.
-  split.
-  apply H0.
-  destruct H0 as [h0 [h1 h2]].
-  omega.
-Qed.
-
-Theorem transition_inv_3: forall (c c0: code) (e stack: environment), correct_state (cCons (Push c) c0, e, stack) -> correct_state (c0, e, cons c e stack).
-Proof.
-  simpl.  
-  intros.
-  destruct H as [h1 [h2 [h3 h4]]].
-  split; trivial.
-  split.
-  apply Correct_stk.
-  done.
-  done.
-  done.
-  done.
-Qed.
-
-Theorem transition_inv_4: forall (c c0: code) (e e0 stack: environment), correct_state (cCons Grab c, e, cons c0 e0 stack) -> correct_state (c, cons c0 e0 e, stack).
-Proof.
-  simpl.
-  intros.
-  destruct H as [h1 [h2 h3]].
-  split.
-  apply Correct_stk.
-  inversion h2.
-  done.
-  by (inversion h2).
-  trivial.
-  split.
-  by (inversion h2).
-  by rewrite plus_comm in h3.
-Qed.
-
-Theorem correct_invariance: forall s: state, correct_state s -> correct_state (exec_inst s).
-Proof.
-  intro.
-  destruct s.
-  destruct p.
-  move: e e0.
-  induction c; trivial.
-  case i.
-  intros n e e0.
-  case e0.
-  by (case n).
-  intros c0 e1 e2.
+  inversion H.
   unfold exec_inst.
-  case n.
-  apply transition_inv_1.
-  intro.
-  apply transition_inv_2.
-  omega.
-  unfold exec_inst.
-  intros e e0.
-  case e; trivial.
-  intros c0 e1 e2.
-  apply transition_inv_4.
-  intros c0 e e0.
-  apply transition_inv_3.
-Qed.
-
-Lemma correct_reduction_1: forall (c c0: code) (e s: environment), 
-  correct_state (cCons (Push c0) c,e,s) -> reduces (tau (cCons (Push c0) c,e,s)) (tau (c, e, cons c0 e s)).
-Proof.
-  intros.
-  simpl.
-  case s.
-  simpl.
-  apply sym.
-  intros.
-  simpl in H.
-  simpl.
-  apply sym.
-Qed.
-
-Lemma correct_reduction_2: forall (c c0: code) (e e0 s: environment),
-  correct_state ((cCons (Access 0) c, cons c0 e0 e, s)) -> 
-  reduces (tau (cCons (Access 0) c, cons c0 e0 e, s)) (tau (c0, e0, s)).
-Proof.
-  simpl.
-  intros.
-  case s.
-  apply sym.
-  intros.
-  apply sym.
-Qed.  
-
-  
-Lemma correct_reduction_3: forall (c c0: code) (e e0 s: environment) (n: nat), 
-(n > 0) -> correct_state (cCons (Access n) c, cons c0 e0 e, s) -> 
-reduces (tau (cCons (Access n) c, cons c0 e0 e, s)) (tau (exec_inst (cCons (Access n) c, cons c0 e0 e, s))).
-Proof.
-  have:forall n:nat, beq_nat n n = true.
-  intro.
-  rewrite beq_nat_true_iff.
-  reflexivity.
-  induction n.
-  intro.
-  omega.
-  intros.  
-  unfold exec_inst.
-  apply transition_inv_2 in H0.
-  move:H0.
-  have: S n - 1 = n.
-  omega.
-  intro x1; rewrite x1.
   unfold tau.
-  case s.
-  case e.
-  simpl; intro; omega.
-  intros; simpl in H0.
   unfold tau_code.
-  rewrite length_inv in H0.
-  simpl.
-  rewrite x;  rewrite <- ?minus_n_O.
-  have:leb n (length (tau_env e2)) = true.
-  rewrite leb_iff.
-  omega.
-  intro x2; rewrite x2.
-  apply sym.
-  case e.
-  intros; simpl in H0; omega.
-  intros.
-  simpl in H0; simpl.
-  rewrite <- ?minus_n_O ; rewrite x; rewrite length_inv in H0.
-  have: leb n (length (tau_env e2)) = true.
-  rewrite leb_iff; omega.
-  intro x2; rewrite x2.
-  apply sym.
-  trivial.
-Qed.
-
-
-Lemma correct_reduction_4: forall (c: code) (e s: environment), 
-correct_state (cCons Grab c, e, s) -> 
-reduces (tau (cCons Grab c, e, s)) (tau (exec_inst (cCons Grab c, e, s))).
-Proof.
-  intros.
-  simpl in H.
-  destruct H as [h0 [h1 h2]].
-  simpl.
-  move:h1.
-  case s.
-  intro.
-  apply sym.
-
-  intros.
-  unfold tau.
+  fold tau_code.
   unfold transform_stk.
   fold transform_stk.
-  case e1.
+  have: match s2 with
+        | nul => multiple_substitution 0 (tau_code c) (tau_env s1) :: nil
+        | cons _ _ _ =>
+            multiple_substitution 0 (tau_code c) (tau_env s1)
+            :: transform_stk s2
+        end = multiple_substitution 0 (tau_code c) (tau_env s1) :: match s2 with
+        | nul => nil
+        | cons _ _ _ => transform_stk s2
+        end.
+  by case s2.
+  intro.
+  rewrite x.
+  unfold multiple_substitution.
+  fold multiple_substitution.
   simpl.
-  rewrite red_equivalence.
-  exists 1.
-  simpl.
-  exists (substitution 0 (multiple_substitution 1 (tau_code c) (lift_all 1 0 (tau_env e)))
-          (multiple_substitution 0 (tau_code c0) (tau_env e0))).
-  rewrite remove_list_lift.
-  split.
-  apply removeLamb.
   rewrite mult_sub_inv.
-  done.
-  apply closed_list_eq.
-  apply closed_env.
-  done.
-  apply closed_env; trivial.
-
+  case s2.
+  simpl.
+  have:lift_all 1 0 (tau_env e) = tau_env e.
+  apply remove_list_lift.
+  by apply closed_env.
+  clear x.
+  intro.
+  rewrite x.
+  apply (ind _ (substitution 0 (multiple_substitution 1 (tau_code c0) (tau_env e))
+        (multiple_substitution 0 (tau_code c) (tau_env s1))) _).
+  apply removeLamb.
+  apply sym.
   intros.
   apply fold_reduce.
-  simpl.
-  rewrite mult_sub_inv.
-  rewrite remove_list_lift.
+  simpl.  
+  have:lift_all 1 0 (tau_env e) = tau_env e.
+  apply remove_list_lift.
+  by apply closed_env.
+  clear x.
+  intro.
+  rewrite x.
   apply removeLamb.
-  apply closed_env; trivial.
-  apply closed_list_eq; apply closed_env; trivial.
+  intro j.
+  apply closed_list_eq.
+  simpl in H.
+  destruct H as [h1 [h2 h3]].
+  by apply closed_env.  
 Qed.
 
 
@@ -754,18 +798,3 @@ Proof.
   apply correct_reduction_1.
   done.
 Qed.
-
-
- 
-  (*Unify every transition*)
-
-
-
-
-
-
-
-
-
-
-  
