@@ -285,8 +285,6 @@ Proof.
   done.  
 Qed.
 
-(*last theorem... i'll do it later*)
-
 Fixpoint all_less_i (i: nat) (lu: list term): Prop := 
   match lu with
     | nil => True
@@ -380,7 +378,7 @@ Proof.
 Qed.
 
 Lemma mult_sub_inv_bis: forall (t u:term) (lu:list term) (i: nat),
- (0 < length lu) -> (forall (j:nat) (u:term), (j < length lu) -> C i (nth j lu u)) -> multiple_substitution i t (u :: lu) = substitution i (multiple_substitution (i+1) t lu) (u).
+ (0 < length lu) -> (forall (j:nat), (j < length lu) -> C i (nth j lu (Var 0))) -> multiple_substitution i t (u :: lu) = substitution i (multiple_substitution (i+1) t lu) (u).
 Proof.
   induction t.
   intros.
@@ -531,7 +529,7 @@ Proof.
 Qed.
   
 Lemma mult_sub_inv: forall (t u:term) (lu:list term) (i: nat),
- (forall (j:nat) (u:term), (j < length lu) -> C i (nth j lu u)) -> multiple_substitution i t (u :: lu) = substitution i (multiple_substitution (i+1) t (lu)) (u).
+ (forall (j:nat), (j < length lu) -> C i (nth j lu (Var 0))) -> multiple_substitution i t (u :: lu) = substitution i (multiple_substitution (i+1) t (lu)) (u).
 Proof.
   induction lu.
   move:u.
