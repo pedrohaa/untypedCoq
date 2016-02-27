@@ -23,6 +23,9 @@ Inductive environment : Type :=
 | nul: environment
 | cons: (prod code environment) -> environment -> environment.
 
+Check environment_ind.
+
+
 Definition state := prod (prod code environment) environment.
 
 
@@ -70,15 +73,15 @@ Fixpoint tau_env (e: environment): list term :=
   match e with
     | nul => nil
     | cons (c0, e0) e1 =>
-      (multiple_substitution (tau_code c0) (tau_env e0) 0 (length (tau_env e0))) :: tau_env e1
+      (multiple_substitution 0 (tau_code c0) (tau_env e0)) :: tau_env e1
   end.
 
 Check state.
 
 Fixpoint transform_stk (stk: environment): list term :=
   match stk with
-      | cons (c0, e0) nul => multiple_substitution (tau_code c0) (tau_env e0) 0 (length (tau_env e0)) :: nil
-      | cons (c0, e0) e1 => (multiple_substitution (tau_code c0) (tau_env e0) 0 (length (tau_env e0))) :: (transform_stk e1)
+      | cons (c0, e0) nul => multiple_substitution 0 (tau_code c0) (tau_env e0) :: nil
+      | cons (c0, e0) e1 => (multiple_substitution 0 (tau_code c0) (tau_env e0)) :: (transform_stk e1)
       | nul => nil
   end.
 
@@ -88,8 +91,8 @@ Fixpoint tau (s: state): term :=
   match s with
     | (c, e, stk) =>
       match stk with
-        | nul => multiple_substitution (tau_code c) (tau_env e) 0 (length (tau_env e))
-        | stk => fold_left (fun t1 t2 => App t1 t2) (transform_stk stk) (multiple_substitution (tau_code c) (tau_env e) 0 (length (tau_env e)))
+        | nul => multiple_substitution 0 (tau_code c) (tau_env e)
+        | stk => fold_left (fun t1 t2 => App t1 t2) (transform_stk stk) (multiple_substitution 0 (tau_code c) (tau_env e))
       end
   end.
 
@@ -170,14 +173,14 @@ Qed.
 
 (*Correct state*)
 
-Fixpoint length (e: environment): nat :=
+Fixpoint lenEnv (e: environment): nat :=
   match e with
     | nul => 0
-    | cons (c0, e0) e1 => 1 + (length e1)
+    | cons (c0, e0) e1 => 1 + (lenEnv e1)
   end.
 
 
-Lemma length_inv: forall e:environment, length e = Datatypes.length (tau_env e).
+Lemma length_inv: forall e:environment, lenEnv e = length (tau_env e).
 Proof.
   intros.
   induction e.
@@ -192,12 +195,12 @@ Qed.
 Fixpoint correct_stk (stk: environment): Prop:=
   match stk with
     | nul => True
-    | cons (c0, e0) e => (correct_stk e0) /\ (correct_stk e) /\ (C (length e0) (tau_code c0)) 
+    | cons (c0, e0) e => (correct_stk e0) /\ (correct_stk e) /\ (C (lenEnv e0) (tau_code c0)) 
   end.
 
 Fixpoint correct_state (s: state): Prop:=
   match s with
-   | (c, e, stk) => (correct_stk e) /\ (correct_stk stk) /\ (C (length e) (tau_code c))
+   | (c, e, stk) => (correct_stk e) /\ (correct_stk stk) /\ (C (lenEnv e) (tau_code c))
   end.
 
 Theorem transition_inv_1: forall (c c0: code) (e e0 stack: environment), correct_state ((cCons (Access 0) c, cons (c0,e0) e, stack)) -> correct_state  (c0, e0, stack).
@@ -321,104 +324,304 @@ Proof.
   intros.
   apply sym.
 Qed.  
+
   
 Lemma correct_reduction_3: forall (c c0: code) (e e0 s: environment) (n: nat), (n > 0) -> correct_state (cCons (Access n) c, cons (c0,e0) e, s) -> reduces (tau (cCons (Access n) c, cons (c0,e0) e, s)) (tau (exec_inst (cCons (Access n) c, cons (c0,e0) e, s))).
 Proof.
-  have h0:forall n, (beq_nat n n = true).
+  have:forall n:nat, beq_nat n n = true.
   intro.
-  apply beq_nat_true_iff.
+  rewrite beq_nat_true_iff.
   reflexivity.
-  unfold exec_inst.
+  intro h0.  
+  unfold correct_state.
   intros c c0 e e0 s n.
-  case n.
+  induction n.
   omega.
   intros.
-  move : H0.
-
-(*trial*)
-
-
-
-
-(* good *)
-
-
+  unfold exec_inst.
+  destruct H0 as [h1 [h2 h3]].
+  move:h1 h2 h3.
   case s.
-  case e.
+  intros h1 h2 h3.
   simpl.
-
-
-  
-
-  intros.
-  destruct H0 as [[h1 [h2 h3]] [h4 h5]].
+  rewrite ?h0.
+  rewrite -?(length_inv).
+  simpl in h3.
+  rewrite -?minus_n_O.
+  have:(leb n (lenEnv e - 1) = true).
+  apply leb_iff.
   omega.
-  
-  intros.
-  move:H0.
-  unfold tau.
-  Search _(_ - S _).
-  rewrite NPeano.Nat.sub_succ.
-  Search _(_ - 0).
-  rewrite -minus_n_O.
-  rewrite (surjective_pairing p).
-  intros.
-  simpl.
-  simpl in H0.
-  rewrite -length_inv.
-  destruct H0 as [[h1 [h2 h3]] [h4 h5]].
-  have: n0 <= length e1.
+  intro h4.
+  rewrite h4.
+  have:(lenEnv e > 0).
   omega.
   intro.
-  Search "leb_iff".
-  apply leb_iff in x.
-  rewrite -minus_n_O.
-  rewrite ?x.
- 
-  rewrite ?h0.
-  rewrite -minus_n_O.
-  apply sym.
-
+  have:(exists n0:nat, lenEnv e = S n0).
+  exists (lenEnv e - 1).
+  omega.
+  intro.
+  case:x0.
   intros.
-  rewrite (surjective_pairing p).
+  rewrite p.
+  have:(leb n x0 = true).
+  apply leb_iff.
+  omega.
+  intro.
+  rewrite x1.
+  apply sym.
+  intros; destruct p.
   unfold tau.
   rewrite NPeano.Nat.sub_succ.
   rewrite -minus_n_O.
-  rewrite -length_inv.
-  rewrite -length_inv.
+  rewrite -?length_inv.
   unfold tau_code.
   unfold multiple_substitution.
-  simpl in H0.
-  destruct H0 as [[h1 [h2 h3]] [h4 h5]].
-  have: n0 <= length e - 1.
+  rewrite -?minus_n_O.
+  have:forall n: nat, 0 + n = n.
+  intro.
   omega.
   intro.
-  rewrite ?plus_O_n.
-  have: S n0 <= length (cons (c0,e0) e) - 1.
-  simpl.
-  omega.
-  intro.
-  apply leb_iff in x.
   rewrite ?x.
+  simpl in h3.
+  have: S n <= lenEnv (cons (c0,e0) e) - 1.
+  simpl.
+  simpl in h3.
+  rewrite -minus_n_O.
+  omega.
+  intro.
   apply leb_iff in x0.
+  rewrite length_inv in x0.
   rewrite x0.
-  have: 0 <= n0.
+  have: leb 0 (S n) = true.
+  apply leb_iff.
   omega.
   intro.
-  apply leb_iff in x1.
   rewrite x1.
-  Search "andb".
-  have: 0 <= S n0.
+  have: leb 0 n = true.
+  apply leb_iff.
   omega.
   intro.
-  apply leb_iff in x2.
   rewrite x2.
+  have:(leb n (lenEnv e - 1) = true).
+  apply leb_iff.
+  omega.
+  intro.
+  rewrite length_inv in x3.
+  rewrite x3.
   simpl.
   rewrite ?h0.
-  rewrite -minus_n_O.
   apply sym.
 Qed.
 
+Definition c_list_i (i:nat) (lu: list term) : Prop :=
+  forall k: nat, k < Datatypes.length lu -> C i (nth k lu (Var 0)).
+
+Fixpoint closed_list (i:nat) (lu: list term): Prop :=
+  match lu with
+    | nil => True
+    | x :: xs => C i x /\ closed_list i xs
+  end.
+
+Lemma closed_list_eq: forall (lu: list term) (i: nat), closed_list i lu <-> c_list_i i lu.
+Proof.
+  induction lu.
+  simpl.
+  unfold c_list_i.
+  split.
+  simpl.
+  intros.
+  omega.
+  done.
+  simpl.
+  split.
+  intros.
+  unfold c_list_i.
+  intro.
+  case k.
+  simpl.
+  intros.
+  tauto.
+  simpl.
+  intros.
+  apply IHlu.
+  tauto.
+  omega.
+  intro.
+  split.
+  unfold c_list_i in H.
+  apply (H 0).
+  simpl.
+  omega.
+  apply IHlu.
+  unfold c_list_i.
+  intro.
+  case k.
+  intro.
+  apply (H 1).
+  simpl.
+  omega.
+  intros.
+  apply (H (S (S n))).
+  simpl.
+  omega.
+Qed.
+
+Lemma lift_len_inv: forall (lu: list term) (i k: nat), Datatypes.length lu = Datatypes.length (lift_all i k lu).
+Proof.
+  admit.
+Qed.
+
+
+Lemma list_lift_free: forall (lu : list term) (i k : nat), c_list_i i lu -> c_list_i (i + 1) (lift_all 1 k lu).
+Proof.
+  admit.
+Qed.
+
+Lemma mult_sub_clos: forall (t: term) (u: list term) (i: nat), closed_list i u -> C (i+Datatypes.length u) t -> C i (multiple_substitution i t u).
+Proof.
+  induction t.
+  simpl.
+  intros.
+  have: beq_nat v v = true.
+  apply beq_nat_true_iff.
+  done.
+  intro.
+  rewrite x.
+  have:leb v (i + Datatypes.length u - 1) = true.
+  apply leb_iff.
+  omega.
+  intro.
+  rewrite x0.
+  rewrite Bool.andb_true_r.
+  have:leb i v = false \/ leb i v = true.
+  apply dic.
+  intro.
+  case x1.
+  intro.
+  rewrite H1.
+  simpl.
+  apply leb_iff_conv in H1.
+  trivial.
+  intro.
+  rewrite H1.
+  apply leb_iff in x0.
+  apply leb_iff in H1.
+  apply closed_list_eq in H.
+  unfold c_list_i in H.
+  apply H.
+  omega.
+  simpl.
+  intros.
+  apply (IHt (lift_all 1 0 u) (i+1)).
+  apply closed_list_eq.
+  apply closed_list_eq in H.  
+  apply list_lift_free.
+  done.
+  rewrite -(lift_len_inv _ 1 0).
+  have: i + Datatypes.length u + 1 = i + 1 + Datatypes.length u.
+  omega.
+  intro.
+  rewrite -x.
+  trivial.
+  simpl.
+  intros.
+  split.
+  apply IHt1.
+  done.
+  tauto.  
+  apply IHt2.
+  done.
+  tauto.  
+Qed.
+  
+(*Lemma mult_sub_clos: forall (t: term) (u: list term) (i: nat), c_list_i i u -> C (i+Datatypes.length u) t -> C i (multiple_substitution t u i (Datatypes.length u)).
+Proof.
+  induction t.
+  simpl.
+  intros.
+  have: beq_nat v v = true.
+  apply beq_nat_true_iff.
+  done.
+  intro.
+  rewrite x.
+  have:leb v (i + Datatypes.length u - 1) = true.
+  apply leb_iff.
+  omega.
+  intro.
+  rewrite x0.
+  rewrite Bool.andb_true_r.
+  have:leb i v = false \/ leb i v = true.
+  apply dic.
+  intro.
+  case x1.
+  intro.
+  rewrite H1.
+  simpl.
+  apply leb_iff_conv in H1.
+  trivial.
+  intro.
+  rewrite H1.
+  apply H.
+  apply leb_iff in H1.
+  omega.
+  simpl.
+  intros.
+  rewrite (lift_len_inv _ 1 0).
+  apply (IHt (lift_all 1 0 u) (i+1)).
+  apply list_lift_free.
+  done.
+  rewrite -(lift_len_inv _ 1 0).
+  have: i + Datatypes.length u + 1 = i + 1 + Datatypes.length u.
+  omega.
+  intro.
+  rewrite -x.
+  trivial.
+  simpl.
+  intros.
+  split.
+  apply IHt1.
+  done.
+  tauto.  
+  apply IHt2.
+  done.
+  tauto.  
+Qed.*)
+
+
+
+Lemma closed_env: forall e:environment, correct_stk e -> closed_list 0 (tau_env e).
+Proof.
+  induction e.
+  simpl.
+  trivial.
+  destruct p.
+  simpl.
+  intros.
+  split.
+  
+
+
+  
+Abort.
+
+Lemma closed_env: forall e:environment, correct_stk e -> c_list_i 0 (tau_env e).
+Proof.
+  induction e.
+  simpl.
+  unfold c_list_i.
+  intros.
+  simpl in H0.
+  omega.
+  destruct p; simpl.
+  intros.
+  unfold c_list_i.
+  intros.
+  simpl in H0.
+  case k.
+  simpl.
+  apply mult_sub_clos.
+Abort.
+  
 Lemma correct_reduction_4: forall (c c0: code) (e e0 s: environment), correct_state (cCons Grab c, e, cons (c0,e0) s) -> reduces (tau (cCons Grab c, e, cons (c0,e0) s)) (tau (c, cons (c0,e0) e, s)).
 Proof.
   intros.
@@ -428,74 +631,26 @@ Proof.
   destruct H0.
   case s.
   unfold tau.
+  unfold transform_stk.
+  unfold fold_left.
   unfold tau_code.
   fold tau_code.
-  unfold transform_stk.
-  fold tau.
   simpl.
-  
-  rewrite red_equivalence.
-  exists 1.
-  simpl.
-  exists (substitution 0 (multiple_substitution (tau_code c) (lift_all 1 0 (tau_env e)) 1
-                (Datatypes.length (tau_env e))) (multiple_substitution (tau_code c0) (tau_env e0) 0
-             (Datatypes.length (tau_env e0)))).
-  split.
-  Search "removeLamb".
-  apply removeLamb.
-  
-  rewrite mult_sub_inv.
-  admit.
-  admit.
-  admit.
-
-
-  (*
-  case s.
-  simpl in H.
-  destruct H as [h0 [h1 h2]].
-  destruct h1.
-  destruct H0.
-  simpl.
-  rewrite red_equivalence.
-  exists 1.
-  simpl.
-  exists (substitution 0 (multiple_substitution (tau_code c) (lift_all 1 0 (tau_env e)) 1
-                (Datatypes.length (tau_env e))) (multiple_substitution (tau_code c0) (tau_env e0) 0
-             (Datatypes.length (tau_env e0)))).
-  split.
+  apply (ind _  (substitution 0 (multiple_substitution 1 (tau_code c) (lift_all 1 0 (tau_env e)))
+                                (multiple_substitution 0 (tau_code c0) (tau_env e0)))  _).
   apply removeLamb.
   rewrite mult_sub_inv.
+  rewrite -?length_inv.
+  simpl.
+  unfold correct_stk in h0.
+  induction e.
+  simpl.
+  intros.
   admit.
   admit.
-  admit.*)
+  admit.
+  admit.
 Qed.
-(*Lemma toy: forall (i: inst) (c: code) (e b: environment), reduces (tau (c, e, b)) (tau (exec_inst (c, e, b))) <-> reduces (tau (cCons i c, e, b)) (tau (exec_inst (cCons i c, e, b))).
-Proof.
-  split.
-  case i.
-  move: c e b.
-  intros c e b n.
-  move: c e b.
-  induction n.
-  intros c e b.
-  case e.
-  intro.
-  apply sym.
-  intros.
-  destruct p.
-  apply sym.
-  intros c e b.
-  case e.
-  intros.
-  apply sym.
-  intros.
-  destruct p.
-  unfold exec_inst.
-  apply sym.
-  simpl.  
-  simpl.
-*)
   
 Theorem correct_confluence: forall s: state, correct_state s -> reduces (tau s) (tau (exec_inst s)).
 Proof.
@@ -539,9 +694,8 @@ Proof.
   intro.
   apply sym.
   intros.
-  rewrite (surjective_pairing p).
+  destruct p.
   apply correct_reduction_4.
-  rewrite -(surjective_pairing p).
   done.
 
   unfold exec_inst.
