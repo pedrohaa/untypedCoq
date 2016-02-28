@@ -630,8 +630,7 @@ Proof.
   rewrite -tau_nil_env.
   by rewrite invert_comp.
 Qed.
-  
-  
+    
 Theorem compiling_correct: forall (t: term) (s: state), C 0 t -> mult_exec_inst (compile t, nul, nul) s -> reduces t (tau s).
 Proof.
   intros.
