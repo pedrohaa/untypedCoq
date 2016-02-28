@@ -207,6 +207,7 @@ Proof.
   by left.
 Qed.
 
+(*VERY USEFUL RESULTS TO PROVE THE LAST CASE*)
 Lemma correct_reduction_push: forall (c c0: code) (e s: environment), correct_state (cCons (Push c0) c,e,s) -> ((tau (cCons (Push c0) c,e,s)) = (tau (c, e, cons c0 e s)) \/reducesInOneTo (tau (cCons (Push c0) c,e,s)) (tau (c, e, cons c0 e s))).
 Proof.
   intros.
@@ -530,7 +531,7 @@ Proof.
   by apply closed_env.  
 Qed.
 
-
+(*General case - Question 5.4*)
 Theorem correct_reduction: forall s: state, correct_state s -> (tau s) = (tau (exec_inst s)) \/ reducesInOneTo (tau s) (tau (exec_inst s)).
 Proof.
   intro s.

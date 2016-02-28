@@ -27,6 +27,7 @@ Definition exec_inst (s: state): state:=
     | (cCons Grab c, e, cons  c0 e0 stack) => (c, cons c0 e0 e, stack)
     | s => s
   end.
+
 (*Executing several times the code*)
 Inductive mult_exec_inst : state -> state -> Prop :=
   | zero_step : forall s : state, mult_exec_inst s s
