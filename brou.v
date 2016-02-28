@@ -425,23 +425,6 @@ Proof.
   trivial.
 Qed.  
 
-Lemma closed_env: forall e:environment, correct_stk e -> c_list_i 0 (tau_env e).
-Proof.
-  induction e.
-  simpl.
-  unfold c_list_i.
-  intros.
-  simpl in H0.
-  omega.
-  destruct p; simpl.
-  intros.
-  unfold c_list_i.
-  intros.
-  simpl in H0.
-  case k.
-  simpl.
-  apply mult_sub_clos.
-Abort.
 
 
 
@@ -453,13 +436,8 @@ Abort.
 
 
 
-
-
-
-
-
-
-Theorem transition_inv_1: forall (c c0: code) (e e0 stack: environment), correct_state ((cCons (Access 0) c, cons (c0,e0) e, stack)) -> correct_state  (c0, e0, stack).
+Theorem transition_inv_1: forall (c c0: code) (e e0 stack: environment), 
+  correct_state ((cCons (Access 0) c, cons c0 e0 e, stack)) -> correct_state  (c0, e0, stack).
 Proof.
   simpl.
   intros.
@@ -468,7 +446,7 @@ Proof.
   tauto.
 Qed.
 
-Theorem transition_inv_2: forall (c c0: code) (e e0 stack: environment) (n: nat), (n > 0) -> correct_state (cCons (Access n) c, cons (c0,e0) e, stack) -> correct_state (cCons (Access (n-1)) c, e, stack).
+Theorem transition_inv_2: forall (c c0: code) (e e0 stack: environment) (n: nat), (n > 0) -> correct_state (cCons (Access n) c, cons c0 e0 e, stack) -> correct_state (cCons (Access (n-1)) c, e, stack).
 Proof.
   simpl.
   intros.
@@ -482,7 +460,7 @@ Proof.
   omega.
 Qed.
 
-Theorem transition_inv_3: forall (c c0: code) (e stack: environment), correct_state (cCons (Push c) c0, e, stack) -> correct_state (c0, e, cons (c,e) stack).
+Theorem transition_inv_3: forall (c c0: code) (e stack: environment), correct_state (cCons (Push c) c0, e, stack) -> correct_state (c0, e, cons c e stack).
 Proof.
   simpl.  
   intros.
@@ -499,7 +477,8 @@ Proof.
   trivial.
 Qed.
 
-Theorem transition_inv_4: forall (c c0: code) (e e0 stack: environment), correct_state (cCons Grab c, e, cons (c0,e0) stack) -> correct_state (c, cons (c0,e0) e, stack).
+Theorem transition_inv_4: forall (c c0: code) (e e0 stack: environment), 
+correct_state (cCons Grab c, e, cons c0 e0 stack) -> correct_state (c, cons c0 e0 e, stack).
 Proof.
   simpl.
   intros.
@@ -531,26 +510,26 @@ Proof.
   trivial.
   trivial.
   intros p e1.
-  destruct p.
   unfold exec_inst.
   case n.
-  apply transition_inv_1.
   intro.
+  Search "transition_inv_1".
+  apply transition_inv_1.
+  intros n0 e2.
   apply transition_inv_2.
   omega.
   unfold exec_inst.
   intros e e0.
   case e.
   trivial.
-  intros p e1.
-  destruct p.
+  intros c0 e1 e2.
   apply transition_inv_4.
   intros c0 e e0.
   apply transition_inv_3.
 Qed.
 
 
-Lemma correct_reduction_1: forall (c c0: code) (e s: environment), correct_state (cCons (Push c0) c,e,s) -> reduces (tau (cCons (Push c0) c,e,s)) (tau (c, e, cons (c0, e) s)).
+Lemma correct_reduction_1: forall (c c0: code) (e s: environment), correct_state (cCons (Push c0) c,e,s) -> reduces (tau (cCons (Push c0) c,e,s)) (tau (c, e, cons c0 e s)).
 Proof.
   intros.
   simpl.
@@ -558,13 +537,13 @@ Proof.
   simpl.
   apply sym.
   intros.
-  destruct p.
   simpl in H.
   simpl.
   apply sym.
 Qed.
 
-Lemma correct_reduction_2: forall (c c0: code) (e e0 s: environment),correct_state ((cCons (Access 0) c, cons (c0,e0) e, s)) -> reduces (tau (cCons (Access 0) c, cons (c0,e0) e, s)) (tau (c0, e0, s)).
+Lemma correct_reduction_2: forall (c c0: code) (e e0 s: environment),
+  correct_state ((cCons (Access 0) c, cons c0 e0 e, s)) -> reduces (tau (cCons (Access 0) c, cons c0 e0 e, s)) (tau (c0, e0, s)).
 Proof.
   simpl.
   intros.
@@ -574,7 +553,7 @@ Proof.
   apply sym.
 Qed.  
   
-Lemma correct_reduction_3: forall (c c0: code) (e e0 s: environment) (n: nat), (n > 0) -> correct_state (cCons (Access n) c, cons (c0,e0) e, s) -> reduces (tau (cCons (Access n) c, cons (c0,e0) e, s)) (tau (exec_inst (cCons (Access n) c, cons (c0,e0) e, s))).
+Lemma correct_reduction_3: forall (c c0: code) (e e0 s: environment) (n: nat), (n > 0) -> correct_state (cCons (Access n) c, cons c0 e0 e, s) -> reduces (tau (cCons (Access n) c, cons c0 e0 e, s)) (tau (exec_inst (cCons (Access n) c, cons c0 e0 e, s))).
 Proof.
   intros.
   unfold exec_inst.
@@ -599,40 +578,29 @@ Proof.
   omega.
   
   intros.
-  move:H0.
+  destruct H3.
+  omega.
+
   unfold tau.
-  Search _(_ - S _).
   rewrite NPeano.Nat.sub_succ.
-  Search _(_ - 0).
   rewrite -minus_n_O.
-  destruct p.
+
+  unfold tau_code.
+  intros.
+  simpl in H0.
+  destruct H0 as [h1 [h2 h3]].
+  have: closed_list 0 (tau_env (cons c0 e0 (cons c1 e1 e2))).
+  apply closed_env.
+  trivial.
+  intro.
+  
+  unfold tau_env.
+  case n0.
+  simpl.
+  apply sym.
   intros.
   simpl.
-  simpl in H0.
-  rewrite -length_inv.
-  destruct H0.
-  destruct H1.
-  have: n0 <= length e1.
-  omega.
-  intro.
-  Search "leb_iff".
-  apply leb_iff in x.
-  rewrite -minus_n_O.
-  rewrite ?x.
- 
-  rewrite ?h0.
-  rewrite -minus_n_O.
-  apply sym.
-
-  intros.
-  rewrite (surjective_pairing p).
-  unfold tau.
-  rewrite NPeano.Nat.sub_succ.
-  rewrite -minus_n_O.
-  rewrite -length_inv.
-  rewrite -length_inv.
-  unfold tau_code.
-  unfold multiple_substitution.
+  rewrite mult_sub_clos.
   simpl in H0.
   destruct H0 as [[h1 [h2 h3]] [h4 h5]].
   have: n0 <= length e - 1.

@@ -31,4 +31,3 @@ Definition exec_inst (s: state): state:=
 Inductive mult_exec_inst : state -> state -> Prop :=
   | zero_step : forall s : state, mult_exec_inst s s
   | iPlus_step: forall s1 s2: state, mult_exec_inst (exec_inst s1) s2 -> mult_exec_inst s1 s2.
-
