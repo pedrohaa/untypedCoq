@@ -1,6 +1,6 @@
 
 
-This Coq code models and proves some interesting results concerning the lambda calculus. Also, it is implemented the definition and proves of an abstract machine which executes a lambda term (Krivine Abstract Machine).
+This Coq code models and proves some interesting results concerning the lambda calculus. Also, it is implemented the definition and proofs of an abstract machine which executes lambda terms (Krivine Abstract Machine).
 
 To compile it, just run the command:
 
